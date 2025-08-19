@@ -1,8 +1,28 @@
 import React, { useState } from 'react';
-import { Home, Music, Clock, Heart, Headphones, Menu, X } from 'lucide-react';
+import { 
+  Home, 
+  Music, 
+  Clock, 
+  Heart, 
+  Headphones, 
+  Menu, 
+  X, 
+  MapPin,
+  User,
+  LogOut,
+  Settings,
+  Crown
+} from 'lucide-react';
 
-const Navbar = ({ currentView, onViewChange }) => {
+const Navbar = ({ 
+  currentView, 
+  onViewChange, 
+  restaurant,
+  userTable,
+  onSwitchToAdmin
+}) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const navItems = [
     { id: 'home', label: 'Inicio', icon: Home },
@@ -37,9 +57,15 @@ const Navbar = ({ currentView, onViewChange }) => {
               <span className="text-xl sm:text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 MusicMenu
               </span>
-              <span className="text-xs text-slate-400 hidden sm:block">
-                Mesa #12
-              </span>
+              <div className="flex items-center space-x-2 text-xs text-slate-400">
+                {restaurant && (
+                  <>
+                    <span>{restaurant.name}</span>
+                    <span>•</span>
+                  </>
+                )}
+                <span>{userTable}</span>
+              </div>
             </div>
           </div>
 
@@ -66,7 +92,6 @@ const Navbar = ({ currentView, onViewChange }) => {
                     <IconComponent className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                     <span>{item.label}</span>
                     
-                    {/* Indicador activo */}
                     {isActive && (
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-xl"></div>
                     )}
@@ -76,32 +101,122 @@ const Navbar = ({ currentView, onViewChange }) => {
             </div>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="lg:hidden">
-            <button 
-              onClick={toggleMobileMenu}
-              className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
+          {/* Right Side Controls */}
+          <div className="flex items-center space-x-3">
+            {/* Restaurant Info - Desktop */}
+            {restaurant && (
+              <div className="hidden lg:flex items-center space-x-3 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl">
+                <img 
+                  src={restaurant.logo}
+                  alt={restaurant.name}
+                  className="w-8 h-8 rounded-lg object-cover"
+                />
+                <div className="text-sm">
+                  <p className="font-medium text-white">{restaurant.name}</p>
+                  <p className="text-slate-400 text-xs flex items-center space-x-1">
+                    <MapPin className="h-3 w-3" />
+                    <span>{userTable}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* User Menu */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
+              >
+                <User className="h-5 w-5" />
+              </button>
+
+              {/* User Dropdown */}
+              {showUserMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50">
+                    <div className="p-4 border-b border-slate-700/30">
+                      <p className="font-medium text-white">{userTable}</p>
+                      <p className="text-sm text-slate-400">{restaurant?.name || 'Cliente'}</p>
+                    </div>
+                    
+                    <div className="p-2">
+                      <button
+                        onClick={() => {
+                          onSwitchToAdmin?.();
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <Crown className="h-4 w-4 text-yellow-400" />
+                        <span className="text-slate-300">Acceso Admin</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          // Reset app - go back to restaurant selection
+                          localStorage.removeItem('musicmenu_selected_restaurant');
+                          window.location.reload();
+                        }}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <LogOut className="h-4 w-4 text-slate-400" />
+                        <span className="text-slate-300">Cambiar Restaurante</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
-            </button>
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="lg:hidden">
+              <button 
+                onClick={toggleMobileMenu}
+                className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Mobile Navigation Overlay */}
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop */}
             <div 
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
               onClick={toggleMobileMenu}
             />
             
-            {/* Mobile Menu */}
             <div className="fixed inset-x-0 top-16 mx-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50 lg:hidden animate-scale-in">
+              {/* Restaurant Info - Mobile */}
+              {restaurant && (
+                <div className="p-4 border-b border-slate-700/30">
+                  <div className="flex items-center space-x-3">
+                    <img 
+                      src={restaurant.logo}
+                      alt={restaurant.name}
+                      className="w-12 h-12 rounded-xl object-cover"
+                    />
+                    <div>
+                      <h3 className="font-semibold text-white">{restaurant.name}</h3>
+                      <p className="text-sm text-slate-400 flex items-center space-x-1">
+                        <MapPin className="h-3 w-3" />
+                        <span>{userTable}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="p-4 space-y-2">
                 {navItems.map((item) => {
                   const IconComponent = item.icon;
@@ -133,7 +248,6 @@ const Navbar = ({ currentView, onViewChange }) => {
                         </div>
                       </div>
                       
-                      {/* Flecha indicadora */}
                       {isActive && (
                         <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                       )}
@@ -142,21 +256,37 @@ const Navbar = ({ currentView, onViewChange }) => {
                 })}
               </div>
               
-              {/* Información adicional en el menú móvil */}
+              {/* Mobile Actions */}
               <div className="border-t border-slate-700/50 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400">Mesa #12</span>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <span className="text-emerald-400 font-medium">Conectado</span>
-                  </div>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      onSwitchToAdmin?.();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                  >
+                    <Crown className="h-5 w-5 text-yellow-400" />
+                    <span className="text-slate-300 font-medium">Acceso Admin</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('musicmenu_selected_restaurant');
+                      window.location.reload();
+                    }}
+                    className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                  >
+                    <LogOut className="h-5 w-5 text-slate-400" />
+                    <span className="text-slate-300 font-medium">Cambiar Restaurante</span>
+                  </button>
                 </div>
               </div>
             </div>
           </>
         )}
 
-        {/* Bottom Navigation for Mobile (alternativa al overlay) - Opcional */}
+        {/* Bottom Navigation for Mobile - Alternative */}
         <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 md:hidden">
           <div className="grid grid-cols-4 gap-1 p-2">
             {navItems.map((item) => {
