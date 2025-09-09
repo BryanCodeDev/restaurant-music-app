@@ -1,5 +1,4 @@
 import React from 'react';
-import { genres } from '../../data/mockData';
 
 const GenreFilter = ({ selectedGenre, onGenreChange }) => {
   return (
