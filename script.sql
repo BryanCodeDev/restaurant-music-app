@@ -2,15 +2,16 @@
 -- Ejecutar en MySQL Workbench paso a paso
 
 -- 1. Crear base de datos
-CREATE DATABASE restaurant_music_db;
+CREATE DATABASE IF NOT EXISTS restaurant_music_db;
 USE restaurant_music_db;
 
--- 2. Crear tablas (usar el schema anterior)
+-- 2. Crear tabla de restaurantes
 CREATE TABLE restaurants (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   name VARCHAR(255) NOT NULL,
   slug VARCHAR(100) UNIQUE NOT NULL,
-  email VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
   phone VARCHAR(20),
   address TEXT,
   city VARCHAR(100),
@@ -23,13 +24,17 @@ CREATE TABLE restaurants (
   is_active BOOLEAN DEFAULT true,
   subscription_plan ENUM('free', 'premium', 'enterprise') DEFAULT 'free',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_slug (slug),
+  INDEX idx_email (email),
+  INDEX idx_active (is_active)
 );
 
+-- 3. Crear tabla de usuarios temporales (mesas)
 CREATE TABLE users (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   restaurant_id VARCHAR(36) NOT NULL,
-  table_number VARCHAR(20) NOT NULL,
+  table_number VARCHAR(50) NOT NULL,
   session_id VARCHAR(255),
   name VARCHAR(100),
   total_requests INT DEFAULT 0,
@@ -39,9 +44,14 @@ CREATE TABLE users (
   user_agent TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  INDEX idx_restaurant_table (restaurant_id, table_number),
+  INDEX idx_session (session_id),
+  INDEX idx_ip (ip_address),
+  INDEX idx_created (created_at)
 );
 
+-- 4. Crear tabla de canciones
 CREATE TABLE songs (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   restaurant_id VARCHAR(36) NOT NULL,
@@ -61,9 +71,15 @@ CREATE TABLE songs (
   times_requested INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  INDEX idx_restaurant_active (restaurant_id, is_active),
+  INDEX idx_genre (genre),
+  INDEX idx_popularity (popularity),
+  INDEX idx_times_requested (times_requested),
+  FULLTEXT(title, artist, album)
 );
 
+-- 5. Crear tabla de peticiones musicales
 CREATE TABLE requests (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   restaurant_id VARCHAR(36) NOT NULL,
@@ -71,7 +87,7 @@ CREATE TABLE requests (
   song_id VARCHAR(36) NOT NULL,
   status ENUM('pending', 'playing', 'completed', 'cancelled') DEFAULT 'pending',
   queue_position INT DEFAULT 0,
-  user_table VARCHAR(20) NOT NULL,
+  user_table VARCHAR(50) NOT NULL,
   requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   started_playing_at TIMESTAMP NULL,
   completed_at TIMESTAMP NULL,
@@ -79,9 +95,15 @@ CREATE TABLE requests (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE
+  FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+  INDEX idx_restaurant_status (restaurant_id, status),
+  INDEX idx_queue_position (queue_position),
+  INDEX idx_user_status (user_id, status),
+  INDEX idx_requested_at (requested_at),
+  INDEX idx_restaurant_date (restaurant_id, requested_at)
 );
 
+-- 6. Crear tabla de favoritos
 CREATE TABLE favorites (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   user_id VARCHAR(36) NOT NULL,
@@ -91,14 +113,47 @@ CREATE TABLE favorites (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
   FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_user_song (user_id, song_id)
+  UNIQUE KEY unique_user_song (user_id, song_id),
+  INDEX idx_user_restaurant (user_id, restaurant_id),
+  INDEX idx_song (song_id)
 );
 
--- 3. Insertar restaurante de prueba
-INSERT INTO restaurants (id, name, slug, email, city, country) VALUES 
-('rest-001', 'La Terraza Musical', 'la-terraza-musical', 'admin@laterraza.com', 'Bogotá', 'Colombia');
+-- 7. Crear tabla de configuraciones adicionales (opcional)
+CREATE TABLE restaurant_settings (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  restaurant_id VARCHAR(36) NOT NULL,
+  setting_key VARCHAR(100) NOT NULL,
+  setting_value TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_restaurant_setting (restaurant_id, setting_key)
+);
 
--- 4. Insertar canciones (basadas en tu mockData.js)
+-- 8. Crear tabla de logs de actividad (opcional)
+CREATE TABLE activity_logs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  restaurant_id VARCHAR(36),
+  user_id VARCHAR(36),
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(50),
+  entity_id VARCHAR(36),
+  details JSON,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_restaurant_date (restaurant_id, created_at),
+  INDEX idx_action (action),
+  INDEX idx_entity (entity_type, entity_id)
+);
+
+-- 9. Insertar restaurante de prueba
+INSERT INTO restaurants (id, name, slug, email, password, city, country) VALUES 
+('rest-001', 'La Terraza Musical', 'la-terraza-musical', 'admin@laterraza.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/AmrwwXv4b.6WLfLz.', 'Bogotá', 'Colombia');
+
+-- 10. Insertar canciones de ejemplo (basadas en tu mockData.js)
 INSERT INTO songs (id, restaurant_id, title, artist, album, duration, genre, image, year, popularity, energy) VALUES
 ('song-001', 'rest-001', 'Bohemian Rhapsody', 'Queen', 'A Night at the Opera', '5:55', 'rock', 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop', 1975, 95, 85),
 ('song-002', 'rest-001', 'Blinding Lights', 'The Weeknd', 'After Hours', '3:20', 'pop', 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop', 2019, 98, 78),
@@ -126,23 +181,109 @@ INSERT INTO songs (id, restaurant_id, title, artist, album, duration, genre, ima
 ('song-024', 'rest-001', 'Billie Jean', 'Michael Jackson', 'Thriller', '4:54', 'pop', 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=400&fit=crop', 1983, 98, 82),
 ('song-025', 'rest-001', 'Hotel California', 'Eagles', 'Hotel California', '6:30', 'rock', 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop', 1976, 97, 75);
 
--- 5. Crear algunos usuarios de prueba
+-- 11. Crear algunos usuarios de prueba
 INSERT INTO users (id, restaurant_id, table_number, session_id, name) VALUES
 ('user-001', 'rest-001', 'Mesa #5', 'session-001', 'Cliente Mesa 5'),
 ('user-002', 'rest-001', 'Mesa #12', 'session-002', 'Cliente Mesa 12'),
 ('user-003', 'rest-001', 'Mesa #8', 'session-003', 'Cliente Mesa 8');
 
--- 6. Crear algunas peticiones de prueba
+-- 12. Crear algunas peticiones de prueba
 INSERT INTO requests (id, restaurant_id, user_id, song_id, status, user_table, queue_position) VALUES
 ('req-001', 'rest-001', 'user-001', 'song-025', 'pending', 'Mesa #5', 1),
 ('req-002', 'rest-001', 'user-002', 'song-024', 'playing', 'Mesa #12', 0),
 ('req-003', 'rest-001', 'user-003', 'song-012', 'completed', 'Mesa #8', 0);
 
--- Verificar que todo se creó correctamente
+-- 13. Crear algunos favoritos de prueba
+INSERT INTO favorites (id, user_id, song_id, restaurant_id) VALUES
+('fav-001', 'user-001', 'song-001', 'rest-001'),
+('fav-002', 'user-001', 'song-013', 'rest-001'),
+('fav-003', 'user-002', 'song-024', 'rest-001');
+
+-- 14. Crear vistas útiles
+CREATE VIEW active_queue AS
+SELECT 
+  r.id,
+  r.queue_position,
+  r.user_table,
+  r.requested_at,
+  s.title,
+  s.artist,
+  s.duration,
+  rest.name as restaurant_name
+FROM requests r
+JOIN songs s ON r.song_id = s.id
+JOIN restaurants rest ON r.restaurant_id = rest.id
+WHERE r.status = 'pending'
+ORDER BY r.queue_position ASC;
+
+CREATE VIEW popular_songs_view AS
+SELECT 
+  s.id,
+  s.title,
+  s.artist,
+  s.album,
+  s.genre,
+  s.image,
+  s.times_requested,
+  COUNT(r.id) as recent_requests,
+  rest.name as restaurant_name
+FROM songs s
+LEFT JOIN requests r ON s.id = r.song_id AND r.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+JOIN restaurants rest ON s.restaurant_id = rest.id
+WHERE s.is_active = true
+GROUP BY s.id
+ORDER BY recent_requests DESC, s.times_requested DESC;
+
+-- 15. Crear triggers para automatización
+DELIMITER //
+
+-- Trigger para actualizar posiciones de cola automáticamente
+CREATE TRIGGER update_queue_positions 
+AFTER UPDATE ON requests
+FOR EACH ROW
+BEGIN
+  IF OLD.status = 'pending' AND NEW.status IN ('completed', 'cancelled') THEN
+    UPDATE requests 
+    SET queue_position = queue_position - 1 
+    WHERE restaurant_id = NEW.restaurant_id 
+    AND status = 'pending' 
+    AND queue_position > OLD.queue_position;
+  END IF;
+END//
+
+-- Trigger para limpiar usuarios inactivos
+CREATE TRIGGER cleanup_old_users
+AFTER INSERT ON users
+FOR EACH ROW
+BEGIN
+  DELETE FROM users 
+  WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
+  AND id NOT IN (
+    SELECT DISTINCT user_id FROM requests 
+    WHERE status IN ('pending', 'playing')
+  );
+END//
+
+DELIMITER ;
+
+-- 16. Crear índices adicionales para optimización
+CREATE INDEX idx_songs_search ON songs(title(100), artist(100));
+CREATE INDEX idx_requests_restaurant_queue ON requests(restaurant_id, status, queue_position);
+CREATE INDEX idx_users_cleanup ON users(created_at, restaurant_id);
+
+-- 17. Verificar que todo se creó correctamente
 SELECT 'Restaurantes' as tabla, COUNT(*) as registros FROM restaurants
 UNION ALL
 SELECT 'Canciones' as tabla, COUNT(*) as registros FROM songs
 UNION ALL
 SELECT 'Usuarios' as tabla, COUNT(*) as registros FROM users  
 UNION ALL
-SELECT 'Peticiones' as tabla, COUNT(*) as registros FROM requests;
+SELECT 'Peticiones' as tabla, COUNT(*) as registros FROM requests
+UNION ALL
+SELECT 'Favoritos' as tabla, COUNT(*) as registros FROM favorites;
+
+-- 18. Script de limpieza (ejecutar periódicamente)
+-- DELETE FROM users WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
+-- DELETE FROM requests WHERE status IN ('completed', 'cancelled') AND completed_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
+
+COMMIT;
