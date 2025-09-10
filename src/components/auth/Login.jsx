@@ -12,13 +12,12 @@ import {
   Building2
 } from 'lucide-react';
 
-const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
+const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, error }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const validateForm = () => {
@@ -32,6 +31,8 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
 
     if (!formData.password) {
       newErrors.password = 'La contraseña es requerida';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
 
     setErrors(newErrors);
@@ -43,15 +44,12 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
     
     if (!validateForm()) return;
 
-    setIsLoading(true);
     setErrors({});
 
     try {
       await onLogin(formData);
     } catch (error) {
       setErrors({ submit: error.message || 'Error al iniciar sesión' });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -59,6 +57,9 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    if (errors.submit) {
+      setErrors(prev => ({ ...prev, submit: '' }));
     }
   };
 
@@ -105,6 +106,7 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
                   }`}
                   placeholder="admin@restaurante.com"
                   autoComplete="email"
+                  disabled={isLoading}
                 />
               </div>
               {errors.email && (
@@ -131,11 +133,13 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
                   }`}
                   placeholder="••••••••"
                   autoComplete="current-password"
+                  disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
@@ -153,17 +157,18 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
               <button
                 type="button"
                 className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                disabled={isLoading}
               >
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
 
             {/* Submit Error */}
-            {errors.submit && (
+            {(errors.submit || error) && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
                 <p className="text-red-400 text-sm flex items-center space-x-2">
                   <AlertCircle className="h-4 w-4" />
-                  <span>{errors.submit}</span>
+                  <span>{errors.submit || error}</span>
                 </p>
               </div>
             )}
@@ -223,6 +228,7 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
               type="button"
               onClick={onSwitchToRegister}
               className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+              disabled={isLoading}
             >
               Registra tu restaurante
             </button>
@@ -238,6 +244,7 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer }) => {
             type="button"
             onClick={onSwitchToCustomer}
             className="inline-flex items-center space-x-2 px-6 py-3 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-xl font-medium hover:bg-slate-800 hover:text-white transition-all duration-300"
+            disabled={isLoading}
           >
             <Headphones className="h-5 w-5" />
             <span>Acceso como Cliente</span>

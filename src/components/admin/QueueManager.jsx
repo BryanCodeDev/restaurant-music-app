@@ -11,7 +11,9 @@ import {
   CheckCircle,
   Pause,
   Timer,
-  Users
+  Users,
+  Move,
+  SkipForward
 } from 'lucide-react';
 
 const QueueManager = ({ 
@@ -20,6 +22,7 @@ const QueueManager = ({
   onCancelRequest,
   onMoveToTop,
   onTogglePlayPause,
+  onSkipToNext,
   isPlaying = false,
   maxRequestsPerUser = 2
 }) => {
@@ -49,6 +52,10 @@ const QueueManager = ({
 
   const getTotalQueueTime = () => {
     return Math.round(pendingRequests.length * 3.5);
+  };
+
+  const getActiveUsers = () => {
+    return new Set(pendingRequests.map(r => r.userTable)).size;
   };
 
   if (!requests.length && !currentSong) {
@@ -116,7 +123,7 @@ const QueueManager = ({
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <Users className="h-4 w-4" />
-              <span>{new Set(pendingRequests.map(r => r.userTable)).size} mesas activas</span>
+              <span>{getActiveUsers()} mesas activas</span>
             </div>
             <div className="flex items-center space-x-1">
               <Timer className="h-4 w-4" />
@@ -162,6 +169,15 @@ const QueueManager = ({
                   <Play className="h-3 w-3 mr-1" />
                   {isPlaying ? 'Reproduciendo' : 'Pausado'}
                 </span>
+                {onSkipToNext && pendingRequests.length > 0 && (
+                  <button
+                    onClick={onSkipToNext}
+                    className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+                  >
+                    <SkipForward className="h-3 w-3 mr-1" />
+                    Siguiente
+                  </button>
+                )}
               </div>
               <h4 className="font-bold text-white text-lg">
                 {(playingRequest || currentSong)?.title}
@@ -243,7 +259,7 @@ const QueueManager = ({
                                 className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded"
                                 title="Mover al inicio"
                               >
-                                <ChevronUp className="h-4 w-4" />
+                                <Move className="h-4 w-4" />
                               </button>
                             )}
                             
@@ -275,7 +291,9 @@ const QueueManager = ({
                           <Clock className="h-3 w-3" />
                           <span>~{estimatedTime} min</span>
                         </span>
-                        <span>{formatTime(request.requestedAt)}</span>
+                        <span>
+                          {formatTime(request.createdAt || request.requestedAt)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -303,6 +321,7 @@ const QueueManager = ({
             <div className="flex items-center space-x-4">
               <span>Total: {pendingRequests.length} canciones</span>
               <span>Tiempo estimado: ~{getTotalQueueTime()} minutos</span>
+              <span>{getActiveUsers()} mesas activas</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-3 w-3 text-emerald-400" />

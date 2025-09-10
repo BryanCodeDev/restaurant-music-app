@@ -2,22 +2,29 @@ import React, { useState } from 'react';
 import Login from './Login';
 import Register from './Register';
 
-const AdminAuth = ({ onLogin, onRegister, onSwitchToCustomer }) => {
+const AdminAuth = ({ onLogin, onRegister, onSwitchToCustomer, error }) => {
   const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (credentials) => {
+    setIsLoading(true);
     try {
       await onLogin(credentials);
     } catch (error) {
       throw error; // Re-throw para que Login maneje el error
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRegister = async (data) => {
+    setIsLoading(true);
     try {
       await onRegister(data);
     } catch (error) {
       throw error; // Re-throw para que Register maneje el error
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -30,6 +37,7 @@ const AdminAuth = ({ onLogin, onRegister, onSwitchToCustomer }) => {
         onRegister={handleRegister}
         onSwitchToLogin={switchToLogin}
         onSwitchToCustomer={onSwitchToCustomer}
+        isLoading={isLoading}
       />
     );
   }
@@ -39,6 +47,8 @@ const AdminAuth = ({ onLogin, onRegister, onSwitchToCustomer }) => {
       onLogin={handleLogin}
       onSwitchToRegister={switchToRegister}
       onSwitchToCustomer={onSwitchToCustomer}
+      isLoading={isLoading}
+      error={error}
     />
   );
 };

@@ -1,4 +1,4 @@
-// src/hooks/useRestaurantMusic.js
+// src/hooks/useRestaurantMusic.js - SOLO API REAL
 import { useState, useEffect, useCallback } from 'react';
 import apiService from '../services/apiService';
 
@@ -11,7 +11,7 @@ export const useRestaurantMusic = (restaurantSlug) => {
   const [restaurant, setRestaurant] = useState(null);
   
   // Estados de UI
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [songsLoading, setSongsLoading] = useState(false);
   const [requestsLoading, setRequestsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -24,175 +24,303 @@ export const useRestaurantMusic = (restaurantSlug) => {
   useEffect(() => {
     if (restaurantSlug) {
       initializeSession();
+    } else {
+      resetState();
     }
   }, [restaurantSlug]);
 
+  const resetState = () => {
+    setSongs([]);
+    setFavorites([]);
+    setRequests([]);
+    setUserSession(null);
+    setRestaurant(null);
+    setLoading(false);
+    setSongsLoading(false);
+    setRequestsLoading(false);
+    setError(null);
+    setCurrentGenre('all');
+    setSearchTerm('');
+  };
+
   const initializeSession = async () => {
+    if (!restaurantSlug) {
+      setError('No restaurant specified');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      // Verificar si ya hay una sesión activa
+      console.log('Initializing session for:', restaurantSlug);
+
+      // Verificar si ya hay una sesión activa válida
       let session = apiService.getCurrentSession();
       
-      if (!session) {
-        // Crear nueva sesión de usuario
+      if (!session || session.user?.restaurantSlug !== restaurantSlug) {
+        console.log('Creating new user session for:', restaurantSlug);
+        // Crear nueva sesión de usuario real
         session = await apiService.createUserSession(restaurantSlug);
-        setUserSession(session.user);
-      } else {
-        setUserSession(session.user);
+        console.log('Session created:', session);
       }
 
-      // Cargar datos iniciales en paralelo
-      await Promise.all([
+      if (session?.user) {
+        setUserSession(session.user);
+        console.log('User session set:', session.user);
+      }
+
+      // Cargar datos reales del servidor
+      const loadPromises = [
         loadSongs(),
-        loadUserRequests(session.user?.tableNumber),
-        // loadFavorites(session.user?.id) // Implementar si necesitas persistir favoritos
-      ]);
+        loadRestaurantInfo()
+      ];
+      
+      if (session?.user?.tableNumber) {
+        loadPromises.push(loadUserRequests(session.user.tableNumber));
+      }
+
+      await Promise.all(loadPromises);
 
     } catch (err) {
       console.error('Error initializing session:', err);
-      setError('Error al conectar con el restaurante. Intenta de nuevo.');
+      setError(`Error al conectar con el restaurante: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadSongs = async (filters = {}) => {
+  const loadRestaurantInfo = async () => {
     if (!restaurantSlug) return;
 
     try {
+      const response = await apiService.getRestaurantBySlug(restaurantSlug);
+      if (response && response.restaurant) {
+        setRestaurant(response.restaurant);
+      }
+    } catch (err) {
+      console.error('Error loading restaurant info:', err);
+      // No es crítico, no setear error
+    }
+  };
+
+  const loadSongs = async (filters = {}) => {
+    if (!restaurantSlug) {
+      console.warn('No restaurant slug provided for loadSongs');
+      return;
+    }
+
+    try {
       setSongsLoading(true);
+      
       const params = {
-        genre: filters.genre || currentGenre !== 'all' ? currentGenre : undefined,
-        search: filters.search || searchTerm,
         page: filters.page || 1,
         limit: filters.limit || 20
       };
 
-      // Limpiar parámetros undefined
-      Object.keys(params).forEach(key => {
-        if (params[key] === undefined || params[key] === '') {
-          delete params[key];
-        }
-      });
+      // Agregar filtros si tienen valores válidos
+      if (filters.genre && filters.genre !== 'all') {
+        params.genre = filters.genre;
+      } else if (currentGenre !== 'all') {
+        params.genre = currentGenre;
+      }
 
+      if (filters.search && filters.search.trim()) {
+        params.search = filters.search.trim();
+      } else if (searchTerm && searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+
+      console.log('Loading songs with params:', params);
+      
       const response = await apiService.getSongs(restaurantSlug, params);
-      setSongs(response.data?.songs || []);
+      console.log('Songs response:', response);
+      
+      if (response && response.songs) {
+        setSongs(response.songs);
+      } else {
+        throw new Error('Invalid songs response format');
+      }
       
     } catch (err) {
       console.error('Error loading songs:', err);
-      setError('Error al cargar las canciones');
+      setError(`Error al cargar las canciones: ${err.message}`);
+      setSongs([]); // Limpiar canciones en caso de error
     } finally {
       setSongsLoading(false);
     }
   };
 
   const searchSongs = useCallback(async (query) => {
-    if (!restaurantSlug) return;
+    if (!restaurantSlug) {
+      console.warn('No restaurant slug provided for searchSongs');
+      return;
+    }
 
     try {
       setSongsLoading(true);
       
-      if (!query.trim()) {
+      if (!query || query.trim().length < 2) {
+        // Si la query está vacía, cargar todas las canciones
         await loadSongs();
         return;
       }
 
-      const response = await apiService.searchSongs(restaurantSlug, query, {
-        genre: currentGenre !== 'all' ? currentGenre : undefined
-      });
+      const options = {};
+      if (currentGenre !== 'all') {
+        options.genre = currentGenre;
+      }
+
+      const response = await apiService.searchSongs(restaurantSlug, query.trim(), options);
       
-      setSongs(response.data?.songs || []);
+      if (response && response.songs) {
+        setSongs(response.songs);
+      } else {
+        throw new Error('Search failed - invalid response');
+      }
       
     } catch (err) {
       console.error('Error searching songs:', err);
-      setError('Error en la búsqueda');
+      setError(`Error en la búsqueda: ${err.message}`);
     } finally {
       setSongsLoading(false);
     }
   }, [restaurantSlug, currentGenre]);
 
   const loadUserRequests = async (tableNumber) => {
-    if (!restaurantSlug || !tableNumber) return;
+    if (!restaurantSlug || !tableNumber) {
+      console.warn('Missing parameters for loadUserRequests:', { restaurantSlug, tableNumber });
+      return;
+    }
 
     try {
       setRequestsLoading(true);
       const response = await apiService.getUserRequests(restaurantSlug, tableNumber);
-      setRequests(response.data?.requests || []);
+      
+      if (response && response.requests) {
+        setRequests(response.requests);
+      } else {
+        console.warn('Invalid requests response:', response);
+        setRequests([]);
+      }
     } catch (err) {
       console.error('Error loading user requests:', err);
-      setError('Error al cargar tus peticiones');
+      setError(`Error al cargar tus peticiones: ${err.message}`);
+      setRequests([]);
     } finally {
       setRequestsLoading(false);
     }
   };
 
   const addRequest = async (song) => {
+    if (!restaurantSlug) {
+      setError('No hay restaurante seleccionado');
+      return false;
+    }
+
+    if (!song?.id) {
+      setError('Información de canción inválida');
+      return false;
+    }
+
     if (!userSession?.tableNumber) {
       setError('Sesión no encontrada');
       return false;
     }
 
+    // Verificar si la canción ya está en la cola
+    const alreadyRequested = requests.some(
+      req => req.song_id === song.id && ['pending', 'playing'].includes(req.status)
+    );
+
+    if (alreadyRequested) {
+      setError('Esta canción ya está en tu cola');
+      return false;
+    }
+
     try {
+      console.log('Creating request:', { restaurantSlug, songId: song.id, tableNumber: userSession.tableNumber });
+      
       const response = await apiService.createRequest(
         restaurantSlug, 
         song.id, 
         userSession.tableNumber
       );
 
-      if (response.success) {
-        // Actualizar requests localmente
-        const newRequest = response.data.request;
-        setRequests(prev => [...prev, newRequest]);
-        
+      console.log('Request created:', response);
+
+      if (response && response.request) {
         // Recargar requests para obtener datos actualizados
         await loadUserRequests(userSession.tableNumber);
-        
         return true;
+      } else {
+        throw new Error('Error creating request - invalid response');
       }
-      
-      return false;
     } catch (err) {
       console.error('Error adding request:', err);
-      setError(err.message || 'Error al enviar la petición');
+      setError(`Error al enviar la petición: ${err.message}`);
       return false;
     }
   };
 
   const cancelRequest = async (requestId) => {
-    if (!userSession?.tableNumber) return false;
+    if (!userSession?.tableNumber) {
+      setError('Sesión inválida');
+      return false;
+    }
+
+    if (!requestId) {
+      setError('ID de petición inválido');
+      return false;
+    }
 
     try {
-      const response = await apiService.cancelRequest(requestId, userSession.tableNumber);
+      console.log('Cancelling request:', requestId);
       
-      if (response.success) {
-        setRequests(prev => prev.filter(req => req.id !== requestId));
+      const response = await apiService.cancelRequest(requestId);
+      
+      if (response) {
+        // Recargar requests para obtener estado actualizado
+        await loadUserRequests(userSession.tableNumber);
         return true;
+      } else {
+        throw new Error('Error cancelling request');
       }
-      
-      return false;
     } catch (err) {
       console.error('Error cancelling request:', err);
-      setError('Error al cancelar la petición');
+      setError(`Error al cancelar la petición: ${err.message}`);
       return false;
     }
   };
 
   const toggleFavorite = async (song) => {
-    // Para esta versión, manejar favoritos localmente
-    // En el futuro se puede implementar persistencia en el backend
-    
-    setFavorites(prev => {
-      const exists = prev.find(fav => fav.id === song.id);
-      if (exists) {
-        return prev.filter(fav => fav.id !== song.id);
-      } else {
-        return [...prev, { ...song, dateAdded: new Date() }];
-      }
-    });
+    if (!song?.id || !userSession?.id) {
+      setError('Información inválida para favoritos');
+      return false;
+    }
 
-    return true;
+    try {
+      const response = await apiService.toggleFavorite(userSession.id, song.id);
+      
+      if (response) {
+        // Actualizar favoritos localmente basándose en la respuesta
+        setFavorites(prev => {
+          const exists = prev.find(fav => fav.id === song.id);
+          if (exists) {
+            return prev.filter(fav => fav.id !== song.id);
+          } else {
+            return [...prev, { ...song, dateAdded: new Date() }];
+          }
+        });
+        return true;
+      }
+      
+      return false;
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      setError('Error al actualizar favoritos');
+      return false;
+    }
   };
 
   const isFavorite = (songId) => {
@@ -200,13 +328,17 @@ export const useRestaurantMusic = (restaurantSlug) => {
   };
 
   const filterByGenre = async (genre) => {
+    if (!restaurantSlug) return;
+    
     setCurrentGenre(genre);
     await loadSongs({ genre });
   };
 
   const setSearch = async (term) => {
+    if (!restaurantSlug) return;
+    
     setSearchTerm(term);
-    if (term) {
+    if (term && term.trim()) {
       await searchSongs(term);
     } else {
       await loadSongs();
@@ -216,18 +348,23 @@ export const useRestaurantMusic = (restaurantSlug) => {
   const clearError = () => setError(null);
 
   const refreshData = async () => {
+    if (!restaurantSlug) return;
+
+    const refreshPromises = [loadSongs()];
+    
     if (userSession?.tableNumber) {
-      await Promise.all([
-        loadSongs(),
-        loadUserRequests(userSession.tableNumber)
-      ]);
+      refreshPromises.push(loadUserRequests(userSession.tableNumber));
     }
+
+    await Promise.all(refreshPromises);
   };
 
   const getPopularSongs = async (limit = 10) => {
+    if (!restaurantSlug) return [];
+
     try {
       const response = await apiService.getPopularSongs(restaurantSlug, limit);
-      return response.data?.songs || [];
+      return response?.songs || [];
     } catch (err) {
       console.error('Error loading popular songs:', err);
       return [];
@@ -284,6 +421,9 @@ export const useRestaurantMusic = (restaurantSlug) => {
     stats,
     
     // Funciones de inicialización
-    initializeSession
+    initializeSession,
+    
+    // Check if hook is ready/active
+    isActive: !!restaurantSlug && !loading
   };
 };

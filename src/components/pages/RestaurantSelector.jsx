@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Search, 
@@ -9,113 +9,85 @@ import {
   Headphones,
   ArrowRight,
   Volume2,
-  Wifi
+  Wifi,
+  Crown,
+  Settings
 } from 'lucide-react';
+import apiService from '../../services/apiService';
 
-// Mock data para restaurantes
-const mockRestaurants = [
-  {
-    id: 1,
-    name: "Café Bohemia",
-    logo: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100&h=100&fit=crop&crop=center",
-    address: "Zona Rosa, Bogotá",
-    type: "Café & Bistró",
-    rating: 4.8,
-    currentSong: "Bohemian Rhapsody - Queen",
-    queueLength: 3,
-    isActive: true,
-    ambiance: "Relajado",
-    capacity: 45
-  },
-  {
-    id: 2,
-    name: "El Rincón del Jazz",
-    logo: "https://images.unsplash.com/photo-1516997121675-4c2d1684aa3e?w=100&h=100&fit=crop&crop=center",
-    address: "La Candelaria, Bogotá",
-    type: "Jazz Club",
-    rating: 4.9,
-    currentSong: "Take Five - Dave Brubeck",
-    queueLength: 5,
-    isActive: true,
-    ambiance: "Jazz",
-    capacity: 80
-  },
-  {
-    id: 3,
-    name: "Taco Libre",
-    logo: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=100&h=100&fit=crop&crop=center",
-    address: "Chapinero, Bogotá",
-    type: "Restaurante Mexicano",
-    rating: 4.6,
-    currentSong: "La Vida Es Un Carnaval - Celia Cruz",
-    queueLength: 2,
-    isActive: true,
-    ambiance: "Festivo",
-    capacity: 60
-  },
-  {
-    id: 4,
-    name: "Burger Station",
-    logo: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=100&h=100&fit=crop&crop=center",
-    address: "Usaquén, Bogotá",
-    type: "Casual Dining",
-    rating: 4.4,
-    currentSong: "Uptown Funk - Bruno Mars",
-    queueLength: 1,
-    isActive: false,
-    ambiance: "Moderno",
-    capacity: 50
-  },
-  {
-    id: 5,
-    name: "La Parrilla Gourmet",
-    logo: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=100&h=100&fit=crop&crop=center",
-    address: "Zona T, Bogotá",
-    type: "Steakhouse",
-    rating: 4.7,
-    currentSong: "Hotel California - Eagles",
-    queueLength: 4,
-    isActive: true,
-    ambiance: "Elegante",
-    capacity: 70
-  },
-  {
-    id: 6,
-    name: "Sushi Zen",
-    logo: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=100&h=100&fit=crop&crop=center",
-    address: "Rosales, Bogotá",
-    type: "Restaurante Japonés",
-    rating: 4.5,
-    currentSong: "Clair de Lune - Debussy",
-    queueLength: 0,
-    isActive: true,
-    ambiance: "Zen",
-    capacity: 35
-  }
-];
-
-const RestaurantSelector = ({ onRestaurantSelect }) => {
+const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
+  const [restaurants, setRestaurants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadRestaurants();
+  }, []);
+
+  const loadRestaurants = async () => {
+    try {
+      setLoading(true);
+      // Si tu backend tiene un endpoint para listar restaurantes públicos
+      // const response = await apiService.getPublicRestaurants();
+      // setRestaurants(response.data || []);
+      
+      // Por ahora usamos datos mock basados en tu base de datos
+      const mockRestaurants = [
+        {
+          id: 'rest-001',
+          name: 'La Terraza Musical',
+          slug: 'la-terraza-musical',
+          logo: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=100&h=100&fit=crop&crop=center',
+          address: 'Bogotá, Colombia',
+          type: 'Restaurante',
+          rating: 4.8,
+          currentSong: 'Hotel California - Eagles',
+          queueLength: 3,
+          isActive: true,
+          ambiance: 'Musical',
+          capacity: 50
+        }
+      ];
+      setRestaurants(mockRestaurants);
+    } catch (err) {
+      console.error('Error loading restaurants:', err);
+      setError('Error al cargar restaurantes');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filters = [
-    { id: 'all', name: 'Todos', count: mockRestaurants.length },
-    { id: 'active', name: 'Activos', count: mockRestaurants.filter(r => r.isActive).length },
-    { id: 'cafe', name: 'Cafés', count: mockRestaurants.filter(r => r.type.includes('Café')).length },
-    { id: 'restaurant', name: 'Restaurantes', count: mockRestaurants.filter(r => r.type.includes('Restaurante')).length }
+    { id: 'all', name: 'Todos', count: restaurants.length },
+    { id: 'active', name: 'Activos', count: restaurants.filter(r => r.isActive).length },
   ];
 
-  const filteredRestaurants = mockRestaurants.filter(restaurant => {
+  const filteredRestaurants = restaurants.filter(restaurant => {
     const matchesSearch = restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          restaurant.address.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (selectedFilter === 'all') return matchesSearch;
     if (selectedFilter === 'active') return matchesSearch && restaurant.isActive;
-    if (selectedFilter === 'cafe') return matchesSearch && restaurant.type.includes('Café');
-    if (selectedFilter === 'restaurant') return matchesSearch && restaurant.type.includes('Restaurante');
     
     return matchesSearch;
   });
+
+  const handleRestaurantSelect = (restaurant) => {
+    onRestaurantSelect(restaurant);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl">Cargando restaurantes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
@@ -144,6 +116,17 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
           <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
             Encuentra tu local favorito y comienza a disfrutar de música personalizada mientras comes
           </p>
+        </div>
+
+        {/* Admin Access Button */}
+        <div className="flex justify-center mb-8">
+          <button
+            onClick={onSwitchToAdmin}
+            className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-xl font-semibold hover:from-yellow-600 hover:to-orange-700 transition-all duration-300 transform hover:scale-105 shadow-lg"
+          >
+            <Crown className="h-5 w-5" />
+            <span>Acceso Administrador</span>
+          </button>
         </div>
 
         {/* Search and Filters */}
@@ -189,6 +172,12 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
           </div>
         </div>
 
+        {error && (
+          <div className="mb-8 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-300 text-center">
+            {error}
+          </div>
+        )}
+
         {/* Results Count */}
         <div className="text-center mb-8">
           <p className="text-slate-400">
@@ -204,9 +193,9 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
           {filteredRestaurants.map((restaurant, index) => (
             <div
               key={restaurant.id}
-              className="group relative bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl overflow-hidden hover:bg-slate-800/60 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 animate-scale-in cursor-pointer"
+              className="group relative bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl overflow-hidden hover:bg-slate-800/60 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer"
               style={{ animationDelay: `${index * 0.1}s` }}
-              onClick={() => onRestaurantSelect(restaurant)}
+              onClick={() => handleRestaurantSelect(restaurant)}
             >
               {/* Status Badge */}
               <div className="absolute top-4 right-4 z-10">
@@ -264,7 +253,7 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
                 </div>
 
                 {/* Current Playing */}
-                {restaurant.isActive && (
+                {restaurant.isActive && restaurant.currentSong && (
                   <div className="bg-slate-700/30 border border-slate-600/30 rounded-xl p-3 space-y-2">
                     <div className="flex items-center space-x-2 text-emerald-400">
                       <Volume2 className="h-4 w-4" />
@@ -281,7 +270,7 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
                   <div className="flex items-center space-x-4 text-xs text-slate-400">
                     <div className="flex items-center space-x-1">
                       <Clock className="h-3 w-3" />
-                      <span>{restaurant.queueLength} en cola</span>
+                      <span>{restaurant.queueLength || 0} en cola</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Users className="h-3 w-3" />
@@ -296,8 +285,11 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
 
                 {/* Connect Button */}
                 <button 
-                  onClick={() => onRestaurantSelect(restaurant)}
-                  className="w-full mt-4 flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRestaurantSelect(restaurant);
+                  }}
+                  className="w-full mt-4 flex items-center justify-center space-x-2 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!restaurant.isActive}
                 >
                   <Wifi className="h-4 w-4" />
@@ -309,7 +301,7 @@ const RestaurantSelector = ({ onRestaurantSelect }) => {
         </div>
 
         {/* Empty State */}
-        {filteredRestaurants.length === 0 && (
+        {filteredRestaurants.length === 0 && !loading && (
           <div className="text-center py-16 lg:py-24">
             <div className="relative mb-8">
               <div className="absolute inset-0 bg-gradient-to-r from-slate-600 to-slate-700 rounded-full opacity-20 blur-2xl"></div>

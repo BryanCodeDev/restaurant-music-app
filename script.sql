@@ -234,7 +234,7 @@ WHERE s.is_active = true
 GROUP BY s.id
 ORDER BY recent_requests DESC, s.times_requested DESC;
 
--- 15. Crear triggers para automatización
+-- 15. TRIGGERS CORREGIDOS - SIN CONFLICTOS
 DELIMITER //
 
 -- Trigger para actualizar posiciones de cola automáticamente
@@ -251,10 +251,15 @@ BEGIN
   END IF;
 END//
 
--- Trigger para limpiar usuarios inactivos
-CREATE TRIGGER cleanup_old_users
-AFTER INSERT ON users
-FOR EACH ROW
+-- Trigger para limpiar usuarios inactivos - REMOVIDO EL PROBLEMÁTICO
+-- Este trigger causaba el error porque intentaba actualizar la misma tabla
+-- Lo reemplazamos con un evento programado o procedimiento manual
+
+DELIMITER ;
+
+-- 16. Crear procedimiento para limpiar usuarios antiguos (reemplaza el trigger problemático)
+DELIMITER //
+CREATE PROCEDURE cleanup_old_users()
 BEGIN
   DELETE FROM users 
   WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
@@ -263,15 +268,14 @@ BEGIN
     WHERE status IN ('pending', 'playing')
   );
 END//
-
 DELIMITER ;
 
--- 16. Crear índices adicionales para optimización
+-- 17. Crear índices adicionales para optimización
 CREATE INDEX idx_songs_search ON songs(title(100), artist(100));
 CREATE INDEX idx_requests_restaurant_queue ON requests(restaurant_id, status, queue_position);
 CREATE INDEX idx_users_cleanup ON users(created_at, restaurant_id);
 
--- 17. Verificar que todo se creó correctamente
+-- 18. Verificar que todo se creó correctamente
 SELECT 'Restaurantes' as tabla, COUNT(*) as registros FROM restaurants
 UNION ALL
 SELECT 'Canciones' as tabla, COUNT(*) as registros FROM songs
@@ -282,8 +286,17 @@ SELECT 'Peticiones' as tabla, COUNT(*) as registros FROM requests
 UNION ALL
 SELECT 'Favoritos' as tabla, COUNT(*) as registros FROM favorites;
 
--- 18. Script de limpieza (ejecutar periódicamente)
--- DELETE FROM users WHERE created_at < DATE_SUB(NOW(), INTERVAL 7 DAY);
+-- 19. Configurar evento para limpieza automática (opcional)
+-- SET GLOBAL event_scheduler = ON;
+-- 
+-- CREATE EVENT cleanup_old_users_event
+-- ON SCHEDULE EVERY 1 DAY
+-- STARTS CURRENT_TIMESTAMP
+-- DO
+--   CALL cleanup_old_users();
+
+-- 20. Script de limpieza manual (ejecutar periódicamente si no usas eventos)
+-- CALL cleanup_old_users();
 -- DELETE FROM requests WHERE status IN ('completed', 'cancelled') AND completed_at < DATE_SUB(NOW(), INTERVAL 30 DAY);
 
 COMMIT;

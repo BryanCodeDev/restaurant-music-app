@@ -1,204 +1,249 @@
 import React from 'react';
 import { 
-  Headphones, 
-  Heart, 
   Music, 
-  Star, 
-  Clock, 
-  HelpCircle,
-  MapPin,
+  Heart, 
+  MapPin, 
+  Globe, 
+  Mail, 
+  Phone, 
+  Clock,
   Wifi,
   Shield,
-  Github,
-  Twitter,
-  Instagram,
-  ExternalLink
+  Info
 } from 'lucide-react';
 
-const Footer = () => {
-  const currentTime = new Date().toLocaleTimeString('es-ES', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
+  const currentYear = new Date().getFullYear();
 
-  const footerLinks = {
-    navegacion: [
-      { name: 'Explorar Música', icon: Music, href: '#browse' },
-      { name: 'Mis Favoritos', icon: Star, href: '#favorites' },
-      { name: 'Historial', icon: Clock, href: '#requests' },
-      { name: 'Ayuda', icon: HelpCircle, href: '#help' }
-    ],
-    informacion: [
-      { name: 'Acerca de', icon: null, href: '#about' },
-      { name: 'Privacidad', icon: Shield, href: '#privacy' },
-      { name: 'Términos', icon: null, href: '#terms' },
-      { name: 'Contacto', icon: null, href: '#contact' }
-    ],
-    social: [
-      { name: 'GitHub', icon: Github, href: '#github' },
-      { name: 'Twitter', icon: Twitter, href: '#twitter' },
-      { name: 'Instagram', icon: Instagram, href: '#instagram' }
-    ]
+  const getConnectionColor = (status) => {
+    switch (status) {
+      case 'connected': return 'text-green-400';
+      case 'connecting': return 'text-yellow-400';
+      case 'disconnected': return 'text-red-400';
+      default: return 'text-slate-400';
+    }
+  };
+
+  const getConnectionText = (status) => {
+    switch (status) {
+      case 'connected': return 'Conectado';
+      case 'connecting': return 'Conectando...';
+      case 'disconnected': return 'Sin conexión';
+      default: return 'Estado desconocido';
+    }
   };
 
   return (
-    <footer className="bg-slate-900/80 backdrop-blur-xl border-t border-slate-700/50 mt-auto relative overflow-hidden">
-      {/* Decorative background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-900/10 via-purple-900/10 to-pink-900/10 pointer-events-none" />
-      
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+    <footer className="bg-slate-900/90 backdrop-blur-xl border-t border-slate-700/50 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           
-          {/* Logo y descripción */}
+          {/* Brand Section */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center space-x-3 group">
+            <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl opacity-20 blur group-hover:opacity-30 transition-opacity duration-300"></div>
-                <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 p-2.5 rounded-xl">
-                  <Headphones className="h-6 w-6 text-white" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl opacity-20 blur"></div>
+                <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl">
+                  <Music className="h-6 w-6 text-white" />
                 </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-xl sm:text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <div>
+                <span className="text-xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   MusicMenu
                 </span>
-                <span className="text-xs text-slate-400">
-                  Música interactiva para restaurantes
-                </span>
+                <p className="text-xs text-slate-500">by MasterCode Company</p>
               </div>
             </div>
-            
-            <p className="text-slate-300 text-sm sm:text-base leading-relaxed max-w-md">
-              La forma más innovadora de disfrutar la música en tu restaurante favorito. 
-              Pide tus canciones y crea el ambiente perfecto mientras disfrutas tu comida.
+            <p className="text-slate-400 text-sm leading-relaxed max-w-md">
+              La experiencia musical interactiva para restaurantes. Conecta con la música mientras disfrutas tu comida, solicita tus canciones favoritas y crea el ambiente perfecto.
             </p>
             
-            {/* Social Links */}
-            <div className="flex items-center space-x-4 pt-2">
-              {footerLinks.social.map((social) => {
-                const SocialIcon = social.icon;
-                return (
-                  <a
-                    key={social.name}
-                    href={social.href}
-                    className="flex items-center justify-center w-10 h-10 bg-slate-800/50 border border-slate-700/50 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 hover:border-slate-600 transition-all duration-300 transform hover:scale-105"
-                    title={social.name}
-                  >
-                    <SocialIcon className="h-4 w-4" />
-                  </a>
-                );
-              })}
+            {/* Connection Status */}
+            <div className="flex items-center space-x-2 text-sm">
+              <Wifi className={`h-4 w-4 ${getConnectionColor(connectionStatus)}`} />
+              <span className={getConnectionColor(connectionStatus)}>
+                {getConnectionText(connectionStatus)}
+              </span>
+              {connectionStatus === 'connected' && (
+                <span className="text-slate-500">• En vivo</span>
+              )}
             </div>
           </div>
 
-          {/* Enlaces de navegación */}
+          {/* Restaurant Info */}
           <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg flex items-center space-x-2">
-              <Music className="h-5 w-5 text-blue-400" />
-              <span>Navegación</span>
+            <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+              <MapPin className="h-5 w-5 text-blue-400" />
+              <span>Información del Local</span>
             </h3>
-            <ul className="space-y-3">
-              {footerLinks.navegacion.map((link) => {
-                const LinkIcon = link.icon;
-                return (
-                  <li key={link.name}>
-                    <a
-                      href={link.href}
-                      className="group flex items-center space-x-2 text-slate-400 hover:text-white transition-colors duration-200"
-                    >
-                      {LinkIcon && <LinkIcon className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" />}
-                      <span className="text-sm">{link.name}</span>
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          {/* Información del restaurante */}
-          <div className="space-y-4">
-            <h3 className="text-white font-bold text-lg flex items-center space-x-2">
-              <MapPin className="h-5 w-5 text-emerald-400" />
-              <span>Mesa Actual</span>
-            </h3>
+            
             <div className="space-y-3">
-              <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Mesa:</span>
-                  <span className="text-sm font-semibold text-blue-400">#12</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Conectado:</span>
-                  <span className="text-sm font-semibold text-emerald-400">{currentTime}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-400">Estado:</span>
-                  <div className="flex items-center space-x-1">
-                    <Wifi className="h-3 w-3 text-emerald-400" />
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      Activo
-                    </span>
+              {restaurant && (
+                <>
+                  <div className="flex items-start space-x-3">
+                    <img 
+                      src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=40&h=40&fit=crop"}
+                      alt={restaurant.name}
+                      className="w-10 h-10 rounded-lg object-cover border border-slate-700"
+                    />
+                    <div>
+                      <h4 className="font-semibold text-white text-sm">{restaurant.name}</h4>
+                      <p className="text-xs text-slate-400">
+                        {restaurant.city && restaurant.country && `${restaurant.city}, ${restaurant.country}`}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {restaurant.address && (
+                    <div className="flex items-center space-x-2 text-sm text-slate-400">
+                      <MapPin className="h-4 w-4 text-slate-500" />
+                      <span className="text-xs">{restaurant.address}</span>
+                    </div>
+                  )}
+                  
+                  {restaurant.phone && (
+                    <div className="flex items-center space-x-2 text-sm text-slate-400">
+                      <Phone className="h-4 w-4 text-slate-500" />
+                      <span className="text-xs">{restaurant.phone}</span>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              {userTable && (
+                <div className="mt-3 p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                  <div className="flex items-center space-x-2 text-sm">
+                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                    <span className="text-slate-300 font-medium">Tu sesión:</span>
+                    <span className="text-blue-400">{userTable}</span>
                   </div>
                 </div>
-              </div>
-              
-              {/* Quick stats */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-slate-800/20 border border-slate-700/20 rounded-lg p-3 text-center">
-                  <div className="text-lg font-bold text-purple-400">0</div>
-                  <div className="text-xs text-slate-500">En cola</div>
-                </div>
-                <div className="bg-slate-800/20 border border-slate-700/20 rounded-lg p-3 text-center">
-                  <div className="text-lg font-bold text-blue-400">2.5k+</div>
-                  <div className="text-xs text-slate-500">Canciones</div>
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
+              <Info className="h-5 w-5 text-blue-400" />
+              <span>Enlaces Útiles</span>
+            </h3>
+            
+            <div className="space-y-2">
+              <a 
+                href="#about" 
+                className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
+              >
+                ¿Cómo funciona?
+              </a>
+              <a 
+                href="#help" 
+                className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
+              >
+                Ayuda y soporte
+              </a>
+              <a 
+                href="#privacy" 
+                className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
+              >
+                Privacidad
+              </a>
+              <a 
+                href="#terms" 
+                className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
+              >
+                Términos de uso
+              </a>
+              <a 
+                href="mailto:support@musicmenu.com" 
+                className="flex items-center space-x-2 text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
+              >
+                <Mail className="h-3 w-3" />
+                <span>Contacto</span>
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Línea divisoria y copyright */}
-        <div className="border-t border-slate-700/50 mt-8 lg:mt-12 pt-6 lg:pt-8">
-          <div className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
-            <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 text-slate-400 text-sm">
-              <p className="text-center sm:text-left">
-                © 2024 MusicMenu. Todos los derechos reservados.
-              </p>
-              <div className="hidden sm:block w-1 h-1 bg-slate-600 rounded-full" />
-              <p className="flex items-center space-x-1">
-                <span>Hecho con</span>
-                <Heart className="h-4 w-4 text-red-400 fill-current animate-pulse" />
-                <span>para los amantes de la música</span>
-              </p>
+        {/* Session Info Bar */}
+        {(restaurant || userTable) && (
+          <div className="mb-6 p-4 bg-slate-800/30 border border-slate-700/50 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm text-slate-300">Sesión iniciada:</span>
+                  <span className="text-sm text-blue-400">
+                    {new Date().toLocaleTimeString('es-ES', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </span>
+                </div>
+                
+                {userTable && (
+                  <>
+                    <div className="w-1 h-1 bg-slate-600 rounded-full"></div>
+                    <span className="text-sm text-slate-400">{userTable}</span>
+                  </>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <Shield className="h-4 w-4 text-green-400" />
+                  <span className="text-xs text-slate-400">Conexión segura</span>
+                </div>
+                
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-slate-400">Tiempo real</span>
+                </div>
+              </div>
             </div>
-            
-            {/* Links adicionales */}
-            <div className="flex items-center space-x-4 text-sm">
-              {footerLinks.informacion.slice(0, 2).map((link, index) => (
-                <React.Fragment key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-slate-400 hover:text-white transition-colors duration-200 flex items-center space-x-1"
-                  >
-                    {link.icon && <link.icon className="h-3 w-3" />}
-                    <span>{link.name}</span>
-                    <ExternalLink className="h-3 w-3 opacity-50" />
-                  </a>
-                  {index < 1 && <div className="w-1 h-1 bg-slate-600 rounded-full" />}
-                </React.Fragment>
-              ))}
-            </div>
+          </div>
+        )}
+
+        {/* Bottom Bar */}
+        <div className="border-t border-slate-700/50 pt-6 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+          <div className="flex items-center space-x-6 text-sm text-slate-400">
+            <span>© {currentYear} MusicMenu.</span>
+            <span>Todos los derechos reservados.</span>
+            <span className="hidden sm:inline">v2.1.0</span>
           </div>
           
-          {/* Version info - Solo visible en desarrollo */}
-          <div className="mt-4 pt-4 border-t border-slate-700/30 text-center">
-            <p className="text-xs text-slate-500">
-              Versión 1.0.0 • Última actualización: Agosto 2024 • 
-              <span className="text-blue-400 ml-1">Estado: Estable</span>
-            </p>
+          <div className="flex items-center space-x-2 text-sm text-slate-400">
+            <span>Desarrollado con</span>
+            <Heart className="h-4 w-4 text-red-400 fill-current animate-pulse" />
+            <span>por</span>
+            <a 
+              href="#" 
+              className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+            >
+              MasterCode Company
+            </a>
           </div>
         </div>
+
+        {/* Performance Stats (Hidden for users, useful for debugging) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-3 bg-slate-800/20 rounded-lg border border-slate-700/30">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>Debug Mode</span>
+              <div className="flex items-center space-x-4">
+                <span>Status: {connectionStatus}</span>
+                <span>Session: {userTable || 'N/A'}</span>
+                <span>Restaurant: {restaurant?.slug || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      
+      {/* Mobile bottom padding for bottom navigation */}
+      <div className="h-20 md:hidden"></div>
     </footer>
   );
 };

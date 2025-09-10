@@ -11,7 +11,10 @@ import {
   User,
   LogOut,
   Settings,
-  Crown
+  Crown,
+  UserPlus,
+  LogIn,
+  ChevronDown
 } from 'lucide-react';
 
 const Navbar = ({ 
@@ -19,10 +22,19 @@ const Navbar = ({
   onViewChange, 
   restaurant,
   userTable,
-  onSwitchToAdmin
+  onSwitchToAdmin,
+  // Nuevas props para autenticación
+  isAuthenticated = false,
+  user = null,
+  onLogin,
+  onRegister,
+  onLogout,
+  onProfile,
+  onSettings
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showAuthMenu, setShowAuthMenu] = useState(false);
 
   const navItems = [
     { id: 'home', label: 'Inicio', icon: Home },
@@ -38,6 +50,24 @@ const Navbar = ({
   const handleNavClick = (itemId) => {
     onViewChange(itemId);
     setIsMobileMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+    } else {
+      // Fallback para mantener compatibilidad
+      localStorage.removeItem('musicmenu_session');
+      localStorage.removeItem('musicmenu_user');
+      localStorage.removeItem('musicmenu_restaurant');
+      window.location.reload();
+    }
+    setShowUserMenu(false);
+  };
+
+  const closeAllMenus = () => {
+    setShowUserMenu(false);
+    setShowAuthMenu(false);
   };
 
   return (
@@ -107,7 +137,7 @@ const Navbar = ({
             {restaurant && (
               <div className="hidden lg:flex items-center space-x-3 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl">
                 <img 
-                  src={restaurant.logo}
+                  src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=32&h=32&fit=crop"}
                   alt={restaurant.name}
                   className="w-8 h-8 rounded-lg object-cover"
                 />
@@ -121,56 +151,185 @@ const Navbar = ({
               </div>
             )}
 
-            {/* User Menu */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
-              >
-                <User className="h-5 w-5" />
-              </button>
-
-              {/* User Dropdown */}
-              {showUserMenu && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowUserMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50">
-                    <div className="p-4 border-b border-slate-700/30">
-                      <p className="font-medium text-white">{userTable}</p>
-                      <p className="text-sm text-slate-400">{restaurant?.name || 'Cliente'}</p>
-                    </div>
-                    
-                    <div className="p-2">
-                      <button
-                        onClick={() => {
-                          onSwitchToAdmin?.();
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
-                      >
-                        <Crown className="h-4 w-4 text-yellow-400" />
-                        <span className="text-slate-300">Acceso Admin</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          // Reset app - go back to restaurant selection
-                          localStorage.removeItem('musicmenu_selected_restaurant');
-                          window.location.reload();
-                        }}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
-                      >
-                        <LogOut className="h-4 w-4 text-slate-400" />
-                        <span className="text-slate-300">Cambiar Restaurante</span>
-                      </button>
-                    </div>
+            {/* Authentication Section */}
+            {isAuthenticated && user ? (
+              /* Usuario autenticado - Menú de perfil */
+              <div className="relative">
+                <button 
+                  onClick={() => {
+                    setShowUserMenu(!showUserMenu);
+                    setShowAuthMenu(false);
+                  }}
+                  className="flex items-center space-x-2 p-2 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <User className="h-4 w-4 text-white" />
                   </div>
-                </>
-              )}
-            </div>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-sm font-medium text-white">{user.name || user.email}</p>
+                    <p className="text-xs text-slate-400">Mi cuenta</p>
+                  </div>
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+
+                {/* User Dropdown */}
+                {showUserMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40"
+                      onClick={closeAllMenus}
+                    />
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50">
+                      <div className="p-4 border-b border-slate-700/30">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <User className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{user.name || 'Usuario'}</p>
+                            <p className="text-sm text-slate-400">{user.email}</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-2">
+                        <button
+                          onClick={() => {
+                            onProfile?.();
+                            closeAllMenus();
+                          }}
+                          className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                        >
+                          <User className="h-5 w-5 text-blue-400" />
+                          <span className="text-slate-300 font-medium">Mi Perfil</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            onSettings?.();
+                            closeAllMenus();
+                          }}
+                          className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                        >
+                          <Settings className="h-5 w-5 text-slate-400" />
+                          <span className="text-slate-300 font-medium">Configuración</span>
+                        </button>
+                        
+                        <div className="h-px bg-slate-700/30 my-2 mx-3"></div>
+                        
+                        <button
+                          onClick={() => {
+                            onSwitchToAdmin?.();
+                            closeAllMenus();
+                          }}
+                          className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                        >
+                          <Crown className="h-5 w-5 text-yellow-400" />
+                          <span className="text-slate-300 font-medium">Panel Administrativo</span>
+                        </button>
+                        
+                        <div className="h-px bg-slate-700/30 my-2 mx-3"></div>
+                        
+                        <button
+                          onClick={() => {
+                            handleLogout();
+                            closeAllMenus();
+                          }}
+                          className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-red-500/10 rounded-xl transition-colors text-red-400 hover:text-red-300"
+                        >
+                          <LogOut className="h-5 w-5" />
+                          <span className="font-medium">Cerrar Sesión</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              /* Usuario no autenticado - Botones de auth */
+              <div className="flex items-center space-x-2">
+                <div className="relative hidden sm:block">
+                  <button 
+                    onClick={() => {
+                      setShowAuthMenu(!showAuthMenu);
+                      setShowUserMenu(false);
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="font-medium">Mi Cuenta</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+
+                  {/* Auth Dropdown */}
+                  {showAuthMenu && (
+                    <>
+                      <div 
+                        className="fixed inset-0 z-40"
+                        onClick={closeAllMenus}
+                      />
+                      <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50">
+                        <div className="p-2">
+                          <button
+                            onClick={() => {
+                              onLogin?.();
+                              closeAllMenus();
+                            }}
+                            className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                          >
+                            <LogIn className="h-5 w-5 text-emerald-400" />
+                            <span className="text-slate-300 font-medium">Iniciar Sesión</span>
+                          </button>
+                          
+                          <button
+                            onClick={() => {
+                              onRegister?.();
+                              closeAllMenus();
+                            }}
+                            className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                          >
+                            <UserPlus className="h-5 w-5 text-blue-400" />
+                            <span className="text-slate-300 font-medium">Registrarse</span>
+                          </button>
+                          
+                          <div className="h-px bg-slate-700/30 my-2 mx-3"></div>
+                          
+                          <button
+                            onClick={() => {
+                              onSwitchToAdmin?.();
+                              closeAllMenus();
+                            }}
+                            className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                          >
+                            <Crown className="h-5 w-5 text-yellow-400" />
+                            <span className="text-slate-300 font-medium">Panel Administrativo</span>
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Mobile auth buttons */}
+                <div className="flex sm:hidden space-x-1">
+                  <button
+                    onClick={onLogin}
+                    className="p-2 rounded-lg bg-slate-800/50 text-emerald-400 hover:bg-slate-800 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-200"
+                    title="Iniciar Sesión"
+                  >
+                    <LogIn className="h-5 w-5" />
+                  </button>
+                  
+                  <button
+                    onClick={onRegister}
+                    className="p-2 rounded-lg bg-slate-800/50 text-blue-400 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-200"
+                    title="Registrarse"
+                  >
+                    <UserPlus className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Mobile menu button */}
             <div className="lg:hidden">
@@ -202,7 +361,7 @@ const Navbar = ({
                 <div className="p-4 border-b border-slate-700/30">
                   <div className="flex items-center space-x-3">
                     <img 
-                      src={restaurant.logo}
+                      src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=48&h=48&fit=crop"}
                       alt={restaurant.name}
                       className="w-12 h-12 rounded-xl object-cover"
                     />
@@ -259,27 +418,99 @@ const Navbar = ({
               {/* Mobile Actions */}
               <div className="border-t border-slate-700/50 p-4">
                 <div className="space-y-2">
-                  <button
-                    onClick={() => {
-                      onSwitchToAdmin?.();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
-                  >
-                    <Crown className="h-5 w-5 text-yellow-400" />
-                    <span className="text-slate-300 font-medium">Acceso Admin</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      localStorage.removeItem('musicmenu_selected_restaurant');
-                      window.location.reload();
-                    }}
-                    className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
-                  >
-                    <LogOut className="h-5 w-5 text-slate-400" />
-                    <span className="text-slate-300 font-medium">Cambiar Restaurante</span>
-                  </button>
+                  {isAuthenticated && user ? (
+                    /* Usuario autenticado - Mobile */
+                    <>
+                      <div className="px-4 py-2 text-sm text-slate-400 border-b border-slate-700/30 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
+                            <User className="h-3 w-3 text-white" />
+                          </div>
+                          <span>{user.name || user.email}</span>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          onProfile?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <User className="h-5 w-5 text-blue-400" />
+                        <span className="text-slate-300 font-medium">Mi Perfil</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          onSettings?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <Settings className="h-5 w-5 text-slate-400" />
+                        <span className="text-slate-300 font-medium">Configuración</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          onSwitchToAdmin?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <Crown className="h-5 w-5 text-yellow-400" />
+                        <span className="text-slate-300 font-medium">Panel Administrativo</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          handleLogout();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-red-500/10 rounded-xl transition-colors text-red-400"
+                      >
+                        <LogOut className="h-5 w-5" />
+                        <span className="font-medium">Cerrar Sesión</span>
+                      </button>
+                    </>
+                  ) : (
+                    /* Usuario no autenticado - Mobile */
+                    <>
+                      <button
+                        onClick={() => {
+                          onLogin?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <LogIn className="h-5 w-5 text-emerald-400" />
+                        <span className="text-slate-300 font-medium">Iniciar Sesión</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          onRegister?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <UserPlus className="h-5 w-5 text-blue-400" />
+                        <span className="text-slate-300 font-medium">Registrarse</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          onSwitchToAdmin?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <Crown className="h-5 w-5 text-yellow-400" />
+                        <span className="text-slate-300 font-medium">Panel Administrativo</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

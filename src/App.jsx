@@ -14,10 +14,11 @@ import Favorites from './components/pages/Favorites';
 import RestaurantSelector from './components/pages/RestaurantSelector';
 import AdminAuth from './components/auth/AdminAuth';
 import AdminDashboard from './components/admin/AdminDashboard';
+import QueueManager from './components/admin/QueueManager';
 import MusicPlayer from './components/music/MusicPlayer';
 import UserLimitManager from './components/music/UserLimitManager';
 
-// Services
+// Services & Hooks
 import apiService from './services/apiService';
 import { useRestaurantMusic } from './hooks/useRestaurantMusic';
 
@@ -27,63 +28,82 @@ function App() {
   const [currentStep, setCurrentStep] = useState('restaurant-selection');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
+  const [authError, setAuthError] = useState(null);
   
   // Music App State
   const [currentView, setCurrentView] = useState('home');
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(75);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Hook para manejar la música cuando tenemos restaurante seleccionado
-  const restaurantMusic = selectedRestaurant ? 
-    useRestaurantMusic(selectedRestaurant.slug) : 
-    { userSession: null, requests: [], favorites: [], addRequest: () => {}, toggleFavorite: () => {} };
+  // Use the restaurant music hook - pass null when no restaurant selected
+  const restaurantMusic = useRestaurantMusic(selectedRestaurant?.slug);
 
-  // Initialize app
+  // Initialize app on mount
   useEffect(() => {
     initializeApp();
   }, []);
 
+  // Auto-update current song from requests
+  useEffect(() => {
+    if (restaurantMusic?.requests && appMode === 'admin') {
+      const playingRequest = restaurantMusic.requests.find(req => req.status === 'playing');
+      if (playingRequest && (!currentSong || currentSong.id !== playingRequest.id)) {
+        setCurrentSong(playingRequest);
+        setIsPlaying(true);
+      }
+    }
+  }, [restaurantMusic?.requests, appMode, currentSong]);
+
   const initializeApp = async () => {
+    setIsLoading(true);
+    
     try {
-      // Verificar sesión de admin
-      const savedAdmin = localStorage.getItem('admin_token');
-      if (savedAdmin) {
-        const profile = await apiService.getProfile();
-        if (profile.data?.restaurant) {
-          setAdminUser(profile.data.restaurant);
-          setAppMode('admin');
-          setCurrentStep('admin-dashboard');
-          return;
+      // Check for admin session
+      const adminToken = localStorage.getItem('admin_token');
+      if (adminToken) {
+        try {
+          const profile = await apiService.getProfile();
+          if (profile.success && profile.data) {
+            setAdminUser(profile.data);
+            setAppMode('admin');
+            setCurrentStep('admin-dashboard');
+            return;
+          }
+        } catch (error) {
+          localStorage.removeItem('admin_token');
+          console.log('Invalid admin token, cleared');
         }
       }
-    } catch (error) {
-      // Token inválido, limpiar
-      localStorage.removeItem('admin_token');
-    }
 
-    // Verificar sesión de usuario
-    try {
-      const savedSession = apiService.getCurrentSession();
-      if (savedSession && savedSession.user) {
-        // Simular datos del restaurante desde la sesión
-        const restaurant = {
-          id: savedSession.user.restaurantId,
-          name: savedSession.user.restaurantName || 'Restaurante',
-          slug: savedSession.restaurantSlug || 'restaurant'
-        };
-        
-        setSelectedRestaurant(restaurant);
-        setCurrentStep('music-app');
-        return;
+      // Check for customer session
+      const customerSession = apiService.getCurrentSession();
+      if (customerSession?.user) {
+        try {
+          // Try to validate session with backend
+          const restaurants = await apiService.getRestaurants();
+          const restaurant = restaurants.find(r => r.id === customerSession.user.restaurantId);
+          
+          if (restaurant) {
+            setSelectedRestaurant(restaurant);
+            setCurrentStep('music-app');
+            return;
+          }
+        } catch (error) {
+          apiService.clearSession();
+          console.log('Invalid customer session, cleared');
+        }
       }
-    } catch (error) {
-      // Sesión inválida, continuar con selección
-      apiService.clearSession();
-    }
 
-    // Por defecto, mostrar selector de restaurantes
-    setCurrentStep('restaurant-selection');
+      // Default to restaurant selection
+      setCurrentStep('restaurant-selection');
+    } catch (error) {
+      console.error('App initialization error:', error);
+      setCurrentStep('restaurant-selection');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Restaurant Selection Handler
@@ -91,10 +111,6 @@ function App() {
     try {
       setSelectedRestaurant(restaurant);
       setCurrentStep('music-app');
-      
-      // El hook useRestaurantMusic se encargará de crear la sesión
-      console.log('Restaurant selected:', restaurant.name);
-      
     } catch (error) {
       console.error('Error selecting restaurant:', error);
     }
@@ -102,32 +118,50 @@ function App() {
 
   // Admin Authentication Handlers
   const handleAdminLogin = async (credentials) => {
+    setAuthError(null);
     try {
       const result = await apiService.loginRestaurant(credentials.email, credentials.password);
-      setAdminUser(result.restaurant);
-      setAppMode('admin');
-      setCurrentStep('admin-dashboard');
+      
+      if (result.success && result.data) {
+        setAdminUser(result.data);
+        setAppMode('admin');
+        setCurrentStep('admin-dashboard');
+      } else {
+        throw new Error(result.message || 'Error al iniciar sesión');
+      }
     } catch (error) {
-      throw new Error(error.message || 'Error al iniciar sesión');
+      const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
+      setAuthError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
   const handleAdminRegister = async (data) => {
+    setAuthError(null);
     try {
       const result = await apiService.registerRestaurant(data);
-      setAdminUser(result.restaurant);
-      setAppMode('admin');
-      setCurrentStep('admin-dashboard');
+      
+      if (result.success && result.data) {
+        setAdminUser(result.data);
+        setAppMode('admin');
+        setCurrentStep('admin-dashboard');
+      } else {
+        throw new Error(result.message || 'Error al registrar restaurante');
+      }
     } catch (error) {
-      throw new Error(error.message || 'Error al registrar restaurante');
+      const errorMessage = error.message || 'Error al registrar el restaurante';
+      setAuthError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
   const handleAdminLogout = () => {
     apiService.clearSession();
+    localStorage.removeItem('admin_token');
     setAdminUser(null);
     setAppMode('customer');
     setCurrentStep('restaurant-selection');
+    setSelectedRestaurant(null);
     setCurrentSong(null);
     setIsPlaying(false);
   };
@@ -137,24 +171,46 @@ function App() {
     setIsPlaying(!isPlaying);
   };
 
-  const handleNext = () => {
-    const pendingRequests = restaurantMusic.requests?.filter(req => req.status === 'pending') || [];
+  const handleNext = async () => {
+    if (!restaurantMusic?.requests) return;
+
+    const pendingRequests = restaurantMusic.requests.filter(req => req.status === 'pending');
     if (pendingRequests.length > 0) {
       const nextSong = pendingRequests[0];
       setCurrentSong(nextSong);
       setIsPlaying(true);
+      
+      // Update song status in backend if admin
+      if (appMode === 'admin') {
+        try {
+          await apiService.updateRequestStatus(nextSong.id, 'playing');
+        } catch (error) {
+          console.error('Error updating song status:', error);
+        }
+      }
     } else {
       setCurrentSong(null);
       setIsPlaying(false);
     }
   };
 
-  const handlePrevious = () => {
-    const completedRequests = restaurantMusic.requests?.filter(req => req.status === 'completed') || [];
+  const handlePrevious = async () => {
+    if (!restaurantMusic?.requests) return;
+
+    const completedRequests = restaurantMusic.requests.filter(req => req.status === 'completed');
     if (completedRequests.length > 0) {
       const previousSong = completedRequests[completedRequests.length - 1];
       setCurrentSong(previousSong);
       setIsPlaying(true);
+      
+      // Update song status in backend if admin
+      if (appMode === 'admin') {
+        try {
+          await apiService.updateRequestStatus(previousSong.id, 'playing');
+        } catch (error) {
+          console.error('Error updating song status:', error);
+        }
+      }
     }
   };
 
@@ -162,31 +218,74 @@ function App() {
     setVolume(newVolume);
   };
 
+  const handleSkipToNext = async () => {
+    if (currentSong && appMode === 'admin') {
+      try {
+        // Mark current as completed
+        await apiService.updateRequestStatus(currentSong.id, 'completed');
+        
+        // Move to next song
+        await handleNext();
+      } catch (error) {
+        console.error('Error skipping to next song:', error);
+      }
+    }
+  };
+
+  // Queue Management Handlers (Admin only)
+  const handleCancelRequest = async (requestId) => {
+    if (appMode === 'admin' && restaurantMusic?.cancelRequest) {
+      try {
+        await restaurantMusic.cancelRequest(requestId);
+      } catch (error) {
+        console.error('Error canceling request:', error);
+      }
+    }
+  };
+
+  const handleMoveToTop = async (requestId) => {
+    if (appMode === 'admin') {
+      try {
+        await apiService.updateRequestPosition(requestId, 1);
+      } catch (error) {
+        console.error('Error moving request to top:', error);
+      }
+    }
+  };
+
   // Switch Modes
   const switchToAdminMode = () => {
+    setAuthError(null);
     setAppMode('admin');
     setCurrentStep('admin-auth');
   };
 
   const switchToCustomerMode = () => {
     apiService.clearSession();
+    localStorage.removeItem('admin_token');
     setAppMode('customer');
     setCurrentStep('restaurant-selection');
     setSelectedRestaurant(null);
+    setAdminUser(null);
     setCurrentSong(null);
     setIsPlaying(false);
+    setAuthError(null);
   };
 
-  // Auto-start music when requests change
-  useEffect(() => {
-    if (!currentSong && restaurantMusic.requests?.length > 0) {
-      const playingRequest = restaurantMusic.requests.find(req => req.status === 'playing');
-      if (playingRequest) {
-        setCurrentSong(playingRequest);
-        setIsPlaying(true);
-      }
-    }
-  }, [restaurantMusic.requests, currentSong]);
+  // Loading Screen
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative mb-6">
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <h2 className="text-xl font-semibold text-white mb-2">Cargando MusicMenu</h2>
+          <p className="text-slate-400">Inicializando la aplicación...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Render Customer Music App
   const renderMusicApp = () => {
@@ -201,12 +300,25 @@ function App() {
       );
     }
 
+    // Provide safe defaults for restaurantMusic
+    const safeRestaurantMusic = {
+      userSession: restaurantMusic?.userSession || null,
+      requests: restaurantMusic?.requests || [],
+      favorites: restaurantMusic?.favorites || [],
+      stats: restaurantMusic?.stats || {},
+      isLoading: restaurantMusic?.isLoading || false,
+      error: restaurantMusic?.error || null,
+      addRequest: restaurantMusic?.addRequest || (() => Promise.resolve(false)),
+      toggleFavorite: restaurantMusic?.toggleFavorite || (() => Promise.resolve(false)),
+      cancelRequest: restaurantMusic?.cancelRequest || (() => Promise.resolve(false))
+    };
+
     const renderCurrentView = () => {
       const commonProps = {
         restaurantSlug: selectedRestaurant.slug,
-        favorites: restaurantMusic.favorites || [],
-        requests: restaurantMusic.requests || [],
-        userSession: restaurantMusic.userSession
+        favorites: safeRestaurantMusic.favorites,
+        requests: safeRestaurantMusic.requests,
+        userSession: safeRestaurantMusic.userSession
       };
 
       switch(currentView) {
@@ -215,46 +327,48 @@ function App() {
             <HomePage 
               onViewChange={setCurrentView} 
               restaurant={selectedRestaurant}
-              userSession={restaurantMusic.userSession}
-              stats={restaurantMusic.stats}
+              userSession={safeRestaurantMusic.userSession}
+              stats={safeRestaurantMusic.stats}
             />
           );
         case 'browse':
           return (
             <UserLimitManager
-              userTable={restaurantMusic.userSession?.tableNumber}
+              userTable={safeRestaurantMusic.userSession?.tableNumber}
               maxRequestsPerUser={2}
-              requests={restaurantMusic.requests || []}
+              requests={safeRestaurantMusic.requests}
               currentSong={currentSong}
-              onRequestSong={restaurantMusic.addRequest}
+              onRequestSong={safeRestaurantMusic.addRequest}
             >
               <BrowseMusic 
                 restaurantSlug={selectedRestaurant.slug}
                 {...commonProps}
+                onAddRequest={safeRestaurantMusic.addRequest}
+                onToggleFavorite={safeRestaurantMusic.toggleFavorite}
               />
             </UserLimitManager>
           );
         case 'requests':
           return (
             <MyRequests 
-              requests={restaurantMusic.requests || []} 
-              userSession={restaurantMusic.userSession}
-              onCancelRequest={restaurantMusic.cancelRequest}
+              requests={safeRestaurantMusic.requests} 
+              userSession={safeRestaurantMusic.userSession}
+              onCancelRequest={safeRestaurantMusic.cancelRequest}
             />
           );
         case 'favorites':
           return (
             <UserLimitManager
-              userTable={restaurantMusic.userSession?.tableNumber}
+              userTable={safeRestaurantMusic.userSession?.tableNumber}
               maxRequestsPerUser={2}
-              requests={restaurantMusic.requests || []}
+              requests={safeRestaurantMusic.requests}
               currentSong={currentSong}
-              onRequestSong={restaurantMusic.addRequest}
+              onRequestSong={safeRestaurantMusic.addRequest}
             >
               <Favorites 
-                favorites={restaurantMusic.favorites || []}
-                onToggleFavorite={restaurantMusic.toggleFavorite}
-                onAddRequest={restaurantMusic.addRequest}
+                favorites={safeRestaurantMusic.favorites}
+                onToggleFavorite={safeRestaurantMusic.toggleFavorite}
+                onAddRequest={safeRestaurantMusic.addRequest}
                 restaurantSlug={selectedRestaurant.slug}
               />
             </UserLimitManager>
@@ -264,7 +378,7 @@ function App() {
             <HomePage 
               onViewChange={setCurrentView} 
               restaurant={selectedRestaurant}
-              userSession={restaurantMusic.userSession}
+              userSession={safeRestaurantMusic.userSession}
             />
           );
       }
@@ -276,7 +390,7 @@ function App() {
           currentView={currentView} 
           onViewChange={setCurrentView}
           restaurant={selectedRestaurant}
-          userTable={restaurantMusic.userSession?.tableNumber}
+          userTable={safeRestaurantMusic.userSession?.tableNumber}
           onSwitchToAdmin={switchToAdminMode}
         />
         
@@ -286,24 +400,63 @@ function App() {
         
         <Footer 
           restaurant={selectedRestaurant} 
-          userTable={restaurantMusic.userSession?.tableNumber} 
+          userTable={safeRestaurantMusic.userSession?.tableNumber} 
         />
         
         {/* Music Player */}
         {currentSong && (
           <MusicPlayer
             currentSong={currentSong}
-            queue={restaurantMusic.requests?.filter(req => req.status === 'pending') || []}
+            queue={safeRestaurantMusic.requests?.filter(req => req.status === 'pending') || []}
             isPlaying={isPlaying}
             volume={volume}
             onPlayPause={handlePlayPause}
             onNext={handleNext}
             onPrevious={handlePrevious}
             onVolumeChange={handleVolumeChange}
-            onToggleFavorite={restaurantMusic.toggleFavorite}
-            isFavorite={restaurantMusic.favorites?.some(fav => fav.id === currentSong.id)}
+            onToggleFavorite={safeRestaurantMusic.toggleFavorite}
+            isFavorite={safeRestaurantMusic.favorites?.some(fav => fav.id === currentSong.id)}
           />
         )}
+      </div>
+    );
+  };
+
+  // Render Admin Dashboard with Queue Manager
+  const renderAdminDashboard = () => {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 p-8">
+          {/* Main Dashboard */}
+          <div className="lg:col-span-2">
+            <AdminDashboard 
+              restaurant={adminUser}
+              requests={restaurantMusic?.requests || []}
+              currentSong={currentSong}
+              onLogout={handleAdminLogout}
+              onPlayPause={handlePlayPause}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onVolumeChange={handleVolumeChange}
+              isPlaying={isPlaying}
+              volume={volume}
+            />
+          </div>
+          
+          {/* Queue Manager */}
+          <div className="lg:col-span-1">
+            <QueueManager 
+              requests={restaurantMusic?.requests || []}
+              currentSong={currentSong}
+              onCancelRequest={handleCancelRequest}
+              onMoveToTop={handleMoveToTop}
+              onTogglePlayPause={handlePlayPause}
+              onSkipToNext={handleSkipToNext}
+              isPlaying={isPlaying}
+              maxRequestsPerUser={2}
+            />
+          </div>
+        </div>
       </div>
     );
   };
@@ -318,29 +471,18 @@ function App() {
               onLogin={handleAdminLogin}
               onRegister={handleAdminRegister}
               onSwitchToCustomer={switchToCustomerMode}
+              error={authError}
             />
           );
         case 'admin-dashboard':
-          return (
-            <AdminDashboard 
-              restaurant={adminUser}
-              requests={restaurantMusic.requests || []}
-              currentSong={currentSong}
-              onLogout={handleAdminLogout}
-              onPlayPause={handlePlayPause}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
-              onVolumeChange={handleVolumeChange}
-              isPlaying={isPlaying}
-              volume={volume}
-            />
-          );
+          return renderAdminDashboard();
         default:
           return (
             <AdminAuth 
               onLogin={handleAdminLogin}
               onRegister={handleAdminRegister}
               onSwitchToCustomer={switchToCustomerMode}
+              error={authError}
             />
           );
       }
