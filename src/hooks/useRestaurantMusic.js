@@ -252,13 +252,35 @@ export const useRestaurantMusic = (restaurantSlug) => {
       if (response && response.request) {
         // Recargar requests para obtener datos actualizados
         await loadUserRequests(userSession.tableNumber);
+        
+        // AGREGAR: Limpiar error si fue exitoso
+        setError(null);
+        
         return true;
       } else {
         throw new Error('Error creating request - invalid response');
       }
     } catch (err) {
       console.error('Error adding request:', err);
-      setError(`Error al enviar la petición: ${err.message}`);
+      
+      // MEJORAR: Manejo más específico de errores
+      let errorMessage = 'Error al enviar la petición';
+      
+      if (err.message.includes('Validation failed')) {
+        errorMessage = 'Datos inválidos. Por favor intenta de nuevo.';
+      } else if (err.message.includes('Queue is full')) {
+        errorMessage = 'La cola está llena. Intenta más tarde.';
+      } else if (err.message.includes('Maximum')) {
+        errorMessage = 'Has alcanzado el límite de peticiones.';
+      } else if (err.message.includes('already requested')) {
+        errorMessage = 'Ya solicitaste esta canción.';
+      } else if (err.message.includes('not found')) {
+        errorMessage = 'Canción no encontrada.';
+      } else {
+        errorMessage = err.message || 'Error desconocido';
+      }
+      
+      setError(errorMessage);
       return false;
     }
   };
@@ -282,6 +304,7 @@ export const useRestaurantMusic = (restaurantSlug) => {
       if (response) {
         // Recargar requests para obtener estado actualizado
         await loadUserRequests(userSession.tableNumber);
+        setError(null); // Limpiar error si fue exitoso
         return true;
       } else {
         throw new Error('Error cancelling request');
@@ -312,6 +335,7 @@ export const useRestaurantMusic = (restaurantSlug) => {
             return [...prev, { ...song, dateAdded: new Date() }];
           }
         });
+        setError(null); // Limpiar error si fue exitoso
         return true;
       }
       

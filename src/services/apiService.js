@@ -1,4 +1,4 @@
-// src/services/apiService.js - VERSION COMPLETAMENTE CORREGIDA
+// src/services/apiService.js - VERSIÓN COMPLETAMENTE CORREGIDA
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 class ApiService {
@@ -18,11 +18,8 @@ class ApiService {
       ...options,
     };
 
-    // Agregar token si existe
-    const token = localStorage.getItem('auth_token') || 
-                  localStorage.getItem('admin_token') || 
-                  localStorage.getItem('user_token');
-    
+    // CORREGIDO: Usar un solo sistema de tokens
+    const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -35,7 +32,7 @@ class ApiService {
     try {
       const response = await fetch(url, config);
       
-      // Manejar respuestas no JSON (ej: texto plano, HTML de error)
+      // Manejar respuestas no JSON
       const contentType = response.headers.get('content-type');
       let responseData;
       
@@ -80,7 +77,7 @@ class ApiService {
     }
   }
 
-  // ===== AUTHENTICATION =====
+  // ===== AUTHENTICATION - CORREGIDO =====
   
   async registerRestaurant(data) {
     const response = await this.request('/auth/register', {
@@ -88,11 +85,13 @@ class ApiService {
       body: data
     });
     
-    if (response.data?.token) {
-      localStorage.setItem('admin_token', response.data.token);
+    // CORREGIDO: Manejar estructura correcta { success, data: { restaurant, token } }
+    if (response.success && response.data?.token) {
+      localStorage.setItem('auth_token', response.data.token);
+      return response.data;
     }
     
-    return response.data;
+    return response;
   }
 
   async loginRestaurant(email, password) {
@@ -101,39 +100,44 @@ class ApiService {
       body: { email, password }
     });
     
-    if (response.data?.token) {
-      localStorage.setItem('admin_token', response.data.token);
+    if (response.success && response.data?.token) {
+      localStorage.setItem('auth_token', response.data.token);
+      return response.data;
     }
     
-    return response.data;
+    return response;
   }
 
+  // CORREGIDO: Endpoint correcto para sesión de usuario
   async createUserSession(restaurantSlug, tableNumber = null) {
     const response = await this.request(`/auth/session/${restaurantSlug}`, {
       method: 'POST',
       body: { tableNumber }
     });
     
-    if (response.data?.token) {
-      localStorage.setItem('user_token', response.data.token);
+    if (response.success && response.data?.token) {
+      localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('current_session', JSON.stringify(response.data));
+      return response.data;
     }
     
-    return response.data;
+    return response;
   }
 
   async getProfile() {
-    return await this.request('/auth/profile');
+    const response = await this.request('/auth/profile');
+    return response.success ? response.data : response;
   }
 
   async updateProfile(data) {
-    return await this.request('/auth/profile', {
+    const response = await this.request('/auth/profile', {
       method: 'PUT',
       body: data
     });
+    return response.success ? response.data : response;
   }
 
-  // ===== SONGS =====
+  // ===== SONGS - CORREGIDO =====
   
   async getSongs(restaurantSlug, params = {}) {
     // Limpiar parámetros undefined
@@ -145,9 +149,10 @@ class ApiService {
     }, {});
     
     const queryString = new URLSearchParams(cleanParams).toString();
-    const endpoint = queryString ? `/songs/${restaurantSlug}?${queryString}` : `/songs/${restaurantSlug}`;
+    const endpoint = `/songs/${restaurantSlug}${queryString ? `?${queryString}` : ''}`;
     
-    return await this.request(endpoint);
+    const response = await this.request(endpoint);
+    return response.success ? response.data : response;
   }
 
   async searchSongs(restaurantSlug, query, options = {}) {
@@ -156,42 +161,50 @@ class ApiService {
     }
     
     const params = new URLSearchParams({ q: query.trim(), ...options });
-    return await this.request(`/songs/${restaurantSlug}/search?${params}`);
+    const response = await this.request(`/songs/${restaurantSlug}/search?${params}`);
+    return response.success ? response.data : response;
   }
 
   async getPopularSongs(restaurantSlug, limit = 10) {
-    return await this.request(`/songs/${restaurantSlug}/popular?limit=${limit}`);
+    const response = await this.request(`/songs/${restaurantSlug}/popular?limit=${limit}`);
+    return response.success ? response.data : response;
   }
 
   async getSongsByGenre(restaurantSlug, genre, limit = 20) {
-    return await this.request(`/songs/${restaurantSlug}/genre/${genre}?limit=${limit}`);
+    const response = await this.request(`/songs/${restaurantSlug}/genre/${genre}?limit=${limit}`);
+    return response.success ? response.data : response;
   }
 
   async getSongDetails(restaurantSlug, songId) {
-    return await this.request(`/songs/${restaurantSlug}/song/${songId}`);
+    const response = await this.request(`/songs/${restaurantSlug}/song/${songId}`);
+    return response.success ? response.data : response;
   }
 
   async getGenres(restaurantSlug) {
-    return await this.request(`/songs/${restaurantSlug}/genres`);
+    const response = await this.request(`/songs/${restaurantSlug}/genres`);
+    return response.success ? response.data : response;
   }
 
-  // ===== REQUESTS =====
+  // ===== REQUESTS - CORREGIDO =====
   
   async createRequest(restaurantSlug, songId, tableNumber) {
     if (!songId) {
       throw new Error('Song ID is required');
     }
     
-    return await this.request(`/requests/${restaurantSlug}`, {
+    // CORREGIDO: Usar endpoint correcto que coincide con requestController.js
+    const response = await this.request(`/requests/${restaurantSlug}`, {
       method: 'POST',
       body: { songId, tableNumber }
     });
+    
+    return response.success ? response.data : response;
   }
 
   async getUserRequests(restaurantSlug, tableNumber = null) {
-    const params = tableNumber ? new URLSearchParams({ tableNumber }) : '';
-    const endpoint = params ? `/requests/${restaurantSlug}/user?${params}` : `/requests/${restaurantSlug}/user`;
-    return await this.request(endpoint);
+    const params = tableNumber ? `?tableNumber=${encodeURIComponent(tableNumber)}` : '';
+    const response = await this.request(`/requests/${restaurantSlug}/user${params}`);
+    return response.success ? response.data : response;
   }
 
   async getRestaurantQueue(restaurantSlug, params = {}) {
@@ -203,8 +216,9 @@ class ApiService {
     }, {});
     
     const queryString = new URLSearchParams(cleanParams).toString();
-    const endpoint = queryString ? `/requests/${restaurantSlug}/queue?${queryString}` : `/requests/${restaurantSlug}/queue`;
-    return await this.request(endpoint);
+    const endpoint = `/requests/${restaurantSlug}/queue${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request(endpoint);
+    return response.success ? response.data : response;
   }
 
   async cancelRequest(requestId, tableNumber) {
@@ -212,10 +226,11 @@ class ApiService {
       throw new Error('Request ID is required');
     }
     
-    return await this.request(`/requests/${requestId}`, {
+    const response = await this.request(`/requests/${requestId}`, {
       method: 'DELETE',
       body: { tableNumber }
     });
+    return response.success ? response.data : response;
   }
 
   async updateRequestStatus(requestId, status) {
@@ -224,40 +239,46 @@ class ApiService {
       throw new Error('Invalid request status');
     }
     
-    return await this.request(`/requests/${requestId}/status`, {
+    const response = await this.request(`/requests/${requestId}/status`, {
       method: 'PATCH',
       body: { status }
     });
+    return response.success ? response.data : response;
   }
 
   async getRequestStats(restaurantSlug, period = '24h') {
-    return await this.request(`/requests/${restaurantSlug}/stats?period=${period}`);
+    const response = await this.request(`/requests/${restaurantSlug}/stats?period=${period}`);
+    return response.success ? response.data : response;
   }
 
   // ===== FAVORITES =====
   
   async getFavorites(userId) {
-    return await this.request(`/favorites/user/${userId}`);
+    const response = await this.request(`/favorites/user/${userId}`);
+    return response.success ? response.data : response;
   }
 
   async toggleFavorite(userId, songId) {
-    return await this.request('/favorites', {
+    const response = await this.request('/favorites', {
       method: 'POST',
       body: { userId, songId }
     });
+    return response.success ? response.data : response;
   }
 
   // ===== RESTAURANTS =====
   
   async getRestaurantBySlug(slug) {
-    return await this.request(`/restaurants/${slug}`);
+    const response = await this.request(`/restaurants/${slug}`);
+    return response.success ? response.data : response;
   }
 
   async getRestaurantStats(slug, period = '24h') {
-    return await this.request(`/restaurants/${slug}/stats?period=${period}`);
+    const response = await this.request(`/restaurants/${slug}/stats?period=${period}`);
+    return response.success ? response.data : response;
   }
 
-  // ===== UTILITY METHODS =====
+  // ===== UTILITY METHODS - CORREGIDO =====
   
   getCurrentSession() {
     try {
@@ -270,24 +291,20 @@ class ApiService {
   }
 
   clearSession() {
-    localStorage.removeItem('user_token');
-    localStorage.removeItem('current_session');
-    localStorage.removeItem('admin_token');
+    // CORREGIDO: Limpiar todos los tipos de tokens
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('current_session');
+    // Limpiar tokens antiguos también
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('user_token');
   }
 
   isAuthenticated() {
-    return !!(
-      localStorage.getItem('admin_token') || 
-      localStorage.getItem('user_token') ||
-      localStorage.getItem('auth_token')
-    );
+    return !!localStorage.getItem('auth_token');
   }
 
   getAuthToken() {
-    return localStorage.getItem('admin_token') || 
-           localStorage.getItem('user_token') ||
-           localStorage.getItem('auth_token');
+    return localStorage.getItem('auth_token');
   }
 
   // Método para verificar la conectividad con el servidor
