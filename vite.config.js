@@ -34,33 +34,53 @@ export default defineConfig({
     // Optimizaciones de bundle
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separar vendor libraries en chunks
-          react: ['react', 'react-dom'],
-          lucide: ['lucide-react'],
-          utils: ['./src/utils/helpers.js'],
+        manualChunks: (id) => {
+          // Separar vendor libraries automáticamente
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('lucide-react')) {
+              return 'icons';
+            }
+            // Otras librerías en un chunk separado
+            return 'vendor';
+          }
+          
+          // Separar utils si es lo suficientemente grande
+          if (id.includes('src/utils')) {
+            return 'utils';
+          }
         },
       },
     },
     
-    // Compresión y minificación
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remover console.log en producción
-        drop_debugger: true,
-      },
-    },
+    // Usar esbuild por defecto (más rápido) o terser si está instalado
+    minify: 'esbuild', // Cambiar a 'terser' si instalas terser
+    
+    // Solo incluir terserOptions si usas terser
+    // terserOptions: {
+    //   compress: {
+    //     drop_console: true, // Remover console.log en producción
+    //     drop_debugger: true,
+    //   },
+    // },
+    
+    // Configuraciones adicionales para optimización
+    chunkSizeWarningLimit: 1000,
+    reportCompressedSize: false, // Mejora velocidad de build
   },
   
   // Variables de entorno
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '1.0.0'),
   },
   
   // Optimización de dependencias
   optimizeDeps: {
     include: ['react', 'react-dom', 'lucide-react'],
+    // Excluir archivos que no necesitan pre-bundling
+    exclude: [],
   },
   
   // CSS configuración
