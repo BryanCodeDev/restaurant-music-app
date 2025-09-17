@@ -1,8 +1,12 @@
 -- Setup completo para Restaurant Music App
 -- Ejecutar en MySQL Workbench paso a paso
+-- Elimina la base de datos si ya existe
+DROP DATABASE IF EXISTS restaurant_music_db;
 
--- 1. Crear base de datos
-CREATE DATABASE IF NOT EXISTS restaurant_music_db;
+-- Crea la base de datos
+CREATE DATABASE restaurant_music_db;
+
+-- Usamos la base de datos recién creada
 USE restaurant_music_db;
 
 -- 2. Crear tabla de restaurantes

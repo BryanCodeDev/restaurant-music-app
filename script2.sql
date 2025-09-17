@@ -1,7 +1,59 @@
--- Actualización completa de la base de datos para sistema de autenticación unificado
+-- ============================
+-- CREACIÓN DE BASE DE DATOS
+-- ============================
+DROP DATABASE IF EXISTS restaurant_music_db;
+CREATE DATABASE restaurant_music_db;
 USE restaurant_music_db;
 
--- 1. CREAR TABLA DE USUARIOS REGISTRADOS (usuarios con cuenta completa)
+-- ============================
+-- TABLAS PRINCIPALES
+-- ============================
+
+-- Restaurantes
+CREATE TABLE restaurants (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  name VARCHAR(255) NOT NULL,
+  owner_name VARCHAR(100),
+  slug VARCHAR(100) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  phone VARCHAR(20),
+  address TEXT,
+  city VARCHAR(100),
+  country VARCHAR(100),
+  logo VARCHAR(500),
+  cover_image VARCHAR(500),
+  description TEXT,
+  website VARCHAR(255),
+  social_media JSON,
+  business_hours JSON,
+  cuisine_type VARCHAR(100),
+  price_range ENUM('$', '$$', '$$$', '$$$$') DEFAULT '$$',
+  rating DECIMAL(3,2) DEFAULT 0.00,
+  total_reviews INT DEFAULT 0,
+  verified BOOLEAN DEFAULT false,
+  verification_date TIMESTAMP NULL,
+  timezone VARCHAR(50) DEFAULT 'America/Bogota',
+  max_requests_per_user INT DEFAULT 2,
+  queue_limit INT DEFAULT 50,
+  auto_play BOOLEAN DEFAULT true,
+  allow_explicit BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  subscription_plan ENUM('free', 'premium', 'enterprise') DEFAULT 'free',
+  last_login_at TIMESTAMP NULL,
+  settings JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_slug (slug),
+  INDEX idx_email (email),
+  INDEX idx_active (is_active),
+  INDEX idx_cuisine (cuisine_type),
+  INDEX idx_rating (rating),
+  INDEX idx_verified (verified),
+  INDEX idx_city_country (city, country)
+);
+
+-- Usuarios registrados (cuentas permanentes)
 CREATE TABLE registered_users (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   name VARCHAR(100) NOT NULL,
@@ -11,9 +63,9 @@ CREATE TABLE registered_users (
   avatar VARCHAR(500),
   bio TEXT,
   date_of_birth DATE,
-  preferred_genres JSON, -- Array de géneros favoritos: ["rock", "pop", "jazz"]
-  preferred_languages JSON, -- Array de idiomas: ["es", "en"]
-  notification_preferences JSON, -- Configuraciones de notificaciones
+  preferred_genres JSON,
+  preferred_languages JSON,
+  notification_preferences JSON,
   theme_preference ENUM('light', 'dark', 'auto') DEFAULT 'dark',
   privacy_level ENUM('public', 'friends', 'private') DEFAULT 'public',
   is_active BOOLEAN DEFAULT true,
@@ -34,62 +86,146 @@ CREATE TABLE registered_users (
   INDEX idx_favorite_restaurant (favorite_restaurant_id)
 );
 
--- 2. ACTUALIZAR TABLA RESTAURANTS (agregar campos faltantes y mejorar)
-ALTER TABLE restaurants 
-ADD COLUMN owner_name VARCHAR(100) AFTER name,
-ADD COLUMN logo VARCHAR(500) AFTER owner_name,
-ADD COLUMN cover_image VARCHAR(500) AFTER logo,
-ADD COLUMN description TEXT AFTER cover_image,
-ADD COLUMN website VARCHAR(255) AFTER description,
-ADD COLUMN social_media JSON AFTER website, -- {"instagram": "@restaurant", "facebook": "page"}
-ADD COLUMN business_hours JSON AFTER social_media, -- Horarios de operación
-ADD COLUMN cuisine_type VARCHAR(100) AFTER business_hours,
-ADD COLUMN price_range ENUM('$', '$$', '$$$', '$$$$') DEFAULT '$$' AFTER cuisine_type,
-ADD COLUMN rating DECIMAL(3,2) DEFAULT 0.00 AFTER price_range,
-ADD COLUMN total_reviews INT DEFAULT 0 AFTER rating,
-ADD COLUMN verified BOOLEAN DEFAULT false AFTER total_reviews,
-ADD COLUMN verification_date TIMESTAMP NULL AFTER verified,
-ADD COLUMN last_login_at TIMESTAMP NULL AFTER verification_date,
-ADD COLUMN settings JSON AFTER last_login_at; -- Configuraciones específicas del restaurante
+-- Usuarios temporales (mesas)
+CREATE TABLE users (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  registered_user_id VARCHAR(36) NULL,
+  user_type ENUM('guest', 'registered') DEFAULT 'guest',
+  restaurant_id VARCHAR(36) NOT NULL,
+  table_number VARCHAR(50) NOT NULL,
+  session_id VARCHAR(255),
+  name VARCHAR(100),
+  total_requests INT DEFAULT 0,
+  requests_today INT DEFAULT 0,
+  last_request_at TIMESTAMP NULL,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  device_info JSON,
+  preferences JSON,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  FOREIGN KEY (registered_user_id) REFERENCES registered_users(id) ON DELETE SET NULL,
+  INDEX idx_restaurant_table (restaurant_id, table_number),
+  INDEX idx_session (session_id),
+  INDEX idx_ip (ip_address),
+  INDEX idx_created (created_at),
+  INDEX idx_registered_user (registered_user_id),
+  INDEX idx_user_type (user_type)
+);
 
--- Agregar índices adicionales para restaurants
-ALTER TABLE restaurants
-ADD INDEX idx_cuisine (cuisine_type),
-ADD INDEX idx_rating (rating),
-ADD INDEX idx_verified (verified),
-ADD INDEX idx_city_country (city, country);
+-- Canciones
+CREATE TABLE songs (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  restaurant_id VARCHAR(36) NOT NULL,
+  title VARCHAR(300) NOT NULL,
+  artist VARCHAR(300) NOT NULL,
+  album VARCHAR(300),
+  duration VARCHAR(10) NOT NULL,
+  year INT,
+  spotify_id VARCHAR(50),
+  preview_url VARCHAR(500),
+  image VARCHAR(500),
+  genre VARCHAR(50) NOT NULL,
+  popularity INT DEFAULT 0,
+  energy INT DEFAULT 0,
+  is_explicit BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  times_requested INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  INDEX idx_restaurant_active (restaurant_id, is_active),
+  INDEX idx_genre (genre),
+  INDEX idx_popularity (popularity),
+  INDEX idx_times_requested (times_requested),
+  FULLTEXT(title, artist, album)
+);
 
--- 3. ACTUALIZAR TABLA USERS (usuarios temporales/mesas)
--- Mantener la tabla actual pero agregar campos para conectar con usuarios registrados
-ALTER TABLE users 
-ADD COLUMN registered_user_id VARCHAR(36) NULL AFTER id,
-ADD COLUMN user_type ENUM('guest', 'registered') DEFAULT 'guest' AFTER registered_user_id,
-ADD COLUMN device_info JSON AFTER user_agent, -- Info del dispositivo
-ADD COLUMN preferences JSON AFTER device_info, -- Preferencias temporales
-ADD INDEX idx_registered_user (registered_user_id),
-ADD INDEX idx_user_type (user_type),
-ADD CONSTRAINT fk_users_registered_user 
-  FOREIGN KEY (registered_user_id) REFERENCES registered_users(id) ON DELETE SET NULL;
+-- Peticiones
+CREATE TABLE requests (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  restaurant_id VARCHAR(36) NOT NULL,
+  user_id VARCHAR(36) NOT NULL,
+  song_id VARCHAR(36) NOT NULL,
+  status ENUM('pending', 'playing', 'completed', 'cancelled') DEFAULT 'pending',
+  queue_position INT DEFAULT 0,
+  user_table VARCHAR(50) NOT NULL,
+  requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  started_playing_at TIMESTAMP NULL,
+  completed_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+  INDEX idx_restaurant_status (restaurant_id, status),
+  INDEX idx_queue_position (queue_position),
+  INDEX idx_user_status (user_id, status),
+  INDEX idx_requested_at (requested_at),
+  INDEX idx_restaurant_date (restaurant_id, requested_at)
+);
 
--- 4. ACTUALIZAR TABLA FAVORITES para soportar ambos tipos de usuarios
-ALTER TABLE favorites 
-ADD COLUMN registered_user_id VARCHAR(36) NULL AFTER user_id,
-ADD COLUMN favorite_type ENUM('session', 'permanent') DEFAULT 'session',
-ADD COLUMN notes TEXT AFTER favorite_type, -- Notas personales sobre la canción
-ADD COLUMN play_count INT DEFAULT 0 AFTER notes,
-ADD COLUMN last_played_at TIMESTAMP NULL AFTER play_count,
-ADD INDEX idx_registered_user (registered_user_id),
-ADD INDEX idx_favorite_type (favorite_type),
-ADD CONSTRAINT fk_favorites_registered_user 
-  FOREIGN KEY (registered_user_id) REFERENCES registered_users(id) ON DELETE CASCADE;
+-- Favoritos
+CREATE TABLE favorites (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  user_id VARCHAR(36) NULL,
+  registered_user_id VARCHAR(36) NULL,
+  song_id VARCHAR(36) NOT NULL,
+  restaurant_id VARCHAR(36) NOT NULL,
+  favorite_type ENUM('session', 'permanent') DEFAULT 'session',
+  notes TEXT,
+  play_count INT DEFAULT 0,
+  last_played_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (registered_user_id) REFERENCES registered_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  CONSTRAINT unique_temp_user_song UNIQUE (user_id, song_id),
+  CONSTRAINT unique_reg_user_song UNIQUE (registered_user_id, song_id),
+  INDEX idx_user_restaurant (user_id, restaurant_id),
+  INDEX idx_song (song_id),
+  INDEX idx_registered_user (registered_user_id),
+  INDEX idx_favorite_type (favorite_type)
+);
 
--- Modificar la constraint única para permitir favoritos tanto de usuarios temporales como registrados
-ALTER TABLE favorites DROP INDEX unique_user_song;
-ALTER TABLE favorites 
-ADD CONSTRAINT unique_temp_user_song UNIQUE (user_id, song_id),
-ADD CONSTRAINT unique_reg_user_song UNIQUE (registered_user_id, song_id);
+-- Configuración extra de restaurantes
+CREATE TABLE restaurant_settings (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  restaurant_id VARCHAR(36) NOT NULL,
+  setting_key VARCHAR(100) NOT NULL,
+  setting_value TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_restaurant_setting (restaurant_id, setting_key)
+);
 
--- 5. CREAR TABLA DE LISTAS DE REPRODUCCIÓN (para usuarios registrados)
+-- Logs de actividad
+CREATE TABLE activity_logs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  restaurant_id VARCHAR(36),
+  user_id VARCHAR(36),
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(50),
+  entity_id VARCHAR(36),
+  details JSON,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_restaurant_date (restaurant_id, created_at),
+  INDEX idx_action (action),
+  INDEX idx_entity (entity_type, entity_id)
+);
+
+-- ============================
+-- NUEVAS TABLAS (DEL SCRIPT2)
+-- ============================
+
+-- Playlists
 CREATE TABLE playlists (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   registered_user_id VARCHAR(36) NOT NULL,
@@ -100,7 +236,7 @@ CREATE TABLE playlists (
   is_collaborative BOOLEAN DEFAULT false,
   play_count INT DEFAULT 0,
   song_count INT DEFAULT 0,
-  total_duration INT DEFAULT 0, -- En segundos
+  total_duration INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (registered_user_id) REFERENCES registered_users(id) ON DELETE CASCADE,
@@ -109,13 +245,13 @@ CREATE TABLE playlists (
   INDEX idx_created (created_at)
 );
 
--- 6. CREAR TABLA DE CANCIONES EN LISTAS DE REPRODUCCIÓN
+-- Canciones en playlists
 CREATE TABLE playlist_songs (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   playlist_id VARCHAR(36) NOT NULL,
   song_id VARCHAR(36) NOT NULL,
   position INT NOT NULL,
-  added_by VARCHAR(36) NOT NULL, -- registered_user_id que agregó la canción
+  added_by VARCHAR(36) NOT NULL,
   added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
   FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE CASCADE,
@@ -126,14 +262,14 @@ CREATE TABLE playlist_songs (
   INDEX idx_added_by (added_by)
 );
 
--- 7. CREAR TABLA DE HISTORIAL DE REPRODUCCIÓN (para usuarios registrados)
+-- Historial de reproducción
 CREATE TABLE listening_history (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   registered_user_id VARCHAR(36) NOT NULL,
   song_id VARCHAR(36) NOT NULL,
   restaurant_id VARCHAR(36) NOT NULL,
   played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  play_duration INT, -- Segundos que realmente escuchó
+  play_duration INT,
   was_completed BOOLEAN DEFAULT false,
   device_info JSON,
   FOREIGN KEY (registered_user_id) REFERENCES registered_users(id) ON DELETE CASCADE,
@@ -144,7 +280,7 @@ CREATE TABLE listening_history (
   INDEX idx_restaurant_date (restaurant_id, played_at)
 );
 
--- 8. CREAR TABLA DE REVIEWS DE RESTAURANTES (para usuarios registrados)
+-- Reviews de restaurantes
 CREATE TABLE restaurant_reviews (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   restaurant_id VARCHAR(36) NOT NULL,
@@ -167,7 +303,7 @@ CREATE TABLE restaurant_reviews (
   INDEX idx_created (created_at)
 );
 
--- 9. CREAR TABLA DE TOKENS DE AUTENTICACIÓN
+-- Tokens de autenticación
 CREATE TABLE auth_tokens (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
   user_id VARCHAR(36) NOT NULL,
@@ -185,56 +321,50 @@ CREATE TABLE auth_tokens (
   INDEX idx_token_type (token_type)
 );
 
--- 10. INSERTAR DATOS DE PRUEBA PARA USUARIOS REGISTRADOS
+-- ===============================
+-- INSERTAR DATOS DE PRUEBA
+-- ===============================
+
+-- Restaurante de prueba
+INSERT INTO restaurants (id, name, slug, email, password, city, country) VALUES 
+('rest-001', 'La Terraza Musical', 'la-terraza-musical', 'admin@laterraza.com', 'admin123', 'Bogotá', 'Colombia');
+
+-- Usuarios registrados
 INSERT INTO registered_users (id, name, email, password, phone, preferred_genres, is_active) VALUES
-('reg-user-001', 'María González', 'maria@demo.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/AmrwwXv4b.6WLfLz.', '+57 300 123 4567', '["pop", "rock", "ballad"]', true),
-('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/AmrwwXv4b.6WLfLz.', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true),
-('reg-user-003', 'Ana Martínez', 'ana@demo.com', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/AmrwwXv4b.6WLfLz.', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true);
+('reg-user-001', 'María González', 'maria@demo.com', 'demo123', '+57 300 123 4567', '["pop", "rock", "ballad"]', true),
+('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', 'demo123', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true),
+('reg-user-003', 'Ana Martínez', 'ana@demo.com', 'demo123', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true);
 
--- 11. ACTUALIZAR DATOS DE RESTAURANTE DE PRUEBA
-UPDATE restaurants SET 
-  owner_name = 'Roberto Pérez',
-  description = 'Un acogedor restaurante con la mejor música en vivo y ambiente familiar. Especializado en cocina colombiana contemporánea.',
-  cuisine_type = 'Colombiana Contemporánea',
-  price_range = '$$',
-  rating = 4.5,
-  total_reviews = 127,
-  business_hours = '{"monday": "12:00-22:00", "tuesday": "12:00-22:00", "wednesday": "12:00-22:00", "thursday": "12:00-23:00", "friday": "12:00-24:00", "saturday": "12:00-24:00", "sunday": "12:00-21:00"}',
-  social_media = '{"instagram": "@laterrazamusical", "facebook": "La Terraza Musical Bogotá"}',
-  verified = true,
-  verification_date = NOW()
-WHERE id = 'rest-001';
+-- Usuarios temporales (mesas)
+INSERT INTO users (id, restaurant_id, table_number, session_id, name, user_type) VALUES
+('user-001', 'rest-001', 'Mesa #5', 'session-001', 'Cliente Mesa 5', 'guest'),
+('user-002', 'rest-001', 'Mesa #12', 'session-002', 'Cliente Mesa 12', 'guest');
 
--- 12. CREAR FAVORITOS PARA USUARIOS REGISTRADOS
+-- Canciones de ejemplo
+INSERT INTO songs (id, restaurant_id, title, artist, album, duration, genre, year) VALUES
+('song-001', 'rest-001', 'Bohemian Rhapsody', 'Queen', 'A Night at the Opera', '5:55', 'rock', 1975),
+('song-002', 'rest-001', 'Blinding Lights', 'The Weeknd', 'After Hours', '3:20', 'pop', 2019);
+
+-- Favoritos de prueba
 INSERT INTO favorites (id, registered_user_id, song_id, restaurant_id, favorite_type, notes) VALUES
-('fav-reg-001', 'reg-user-001', 'song-001', 'rest-001', 'permanent', 'Mi canción favorita de todos los tiempos'),
-('fav-reg-002', 'reg-user-001', 'song-013', 'rest-001', 'permanent', 'Perfecta para relajarse'),
-('fav-reg-003', 'reg-user-002', 'song-014', 'rest-001', 'permanent', 'Gran energía para bailar'),
-('fav-reg-004', 'reg-user-003', 'song-005', 'rest-001', 'permanent', 'Excelente pieza de jazz');
+('fav-001', 'reg-user-001', 'song-001', 'rest-001', 'permanent', 'Clásico favorito'),
+('fav-002', 'reg-user-002', 'song-002', 'rest-001', 'permanent', 'Me sube el ánimo');
 
--- 13. CREAR ALGUNAS LISTAS DE REPRODUCCIÓN
+-- Playlists
 INSERT INTO playlists (id, registered_user_id, name, description, is_public) VALUES
-('playlist-001', 'reg-user-001', 'Mis Clásicos', 'Las mejores canciones clásicas que nunca pasan de moda', true),
-('playlist-002', 'reg-user-002', 'Para Bailar', 'Música perfecta para mover el cuerpo', true),
-('playlist-003', 'reg-user-003', 'Música Relajante', 'Para momentos de tranquilidad y reflexión', false);
+('playlist-001', 'reg-user-001', 'Mis Clásicos', 'Las mejores canciones clásicas', true);
 
--- 14. AGREGAR CANCIONES A LAS LISTAS
 INSERT INTO playlist_songs (id, playlist_id, song_id, position, added_by) VALUES
-('ps-001', 'playlist-001', 'song-001', 1, 'reg-user-001'),
-('ps-002', 'playlist-001', 'song-013', 2, 'reg-user-001'),
-('ps-003', 'playlist-001', 'song-025', 3, 'reg-user-001'),
-('ps-004', 'playlist-002', 'song-014', 1, 'reg-user-002'),
-('ps-005', 'playlist-002', 'song-006', 2, 'reg-user-002'),
-('ps-006', 'playlist-003', 'song-005', 1, 'reg-user-003'),
-('ps-007', 'playlist-003', 'song-018', 2, 'reg-user-003');
+('ps-001', 'playlist-001', 'song-001', 1, 'reg-user-001');
 
--- 15. CREAR ALGUNAS RESEÑAS
+-- Reviews
 INSERT INTO restaurant_reviews (id, restaurant_id, registered_user_id, rating, title, comment, music_quality_rating, service_rating, ambiance_rating) VALUES
-('review-001', 'rest-001', 'reg-user-001', 5, 'Excelente experiencia musical', 'La variedad de música es increíble y el sistema de peticiones funciona perfecto', 5, 4, 5),
-('review-002', 'rest-001', 'reg-user-002', 4, 'Muy buen ambiente', 'Me encanta poder pedir mi música favorita mientras ceno', 4, 4, 4),
-('review-003', 'rest-001', 'reg-user-003', 5, 'Innovador concepto', 'Nunca había visto algo así, muy original y divertido', 5, 5, 5);
+('review-001', 'rest-001', 'reg-user-001', 5, 'Excelente experiencia musical', 'Gran ambiente y música', 5, 5, 5);
 
--- 16. CREAR VISTAS ACTUALIZADAS
+-- ===============================
+-- VISTAS ÚTILES
+-- ===============================
+
 CREATE OR REPLACE VIEW user_favorites_view AS
 SELECT 
   COALESCE(f.registered_user_id, f.user_id) as user_id,
@@ -248,7 +378,6 @@ SELECT
   s.artist,
   s.album,
   s.genre,
-  s.image,
   f.notes,
   f.play_count,
   f.created_at as favorited_at,
@@ -294,7 +423,9 @@ FROM users u
 LEFT JOIN favorites f ON u.id = f.user_id
 GROUP BY u.id;
 
--- 17. PROCEDIMIENTOS ALMACENADOS ÚTILES
+-- ===============================
+-- PROCEDIMIENTOS
+-- ===============================
 DELIMITER //
 
 CREATE PROCEDURE GetUserProfile(IN user_id VARCHAR(36), IN user_type ENUM('registered', 'guest'))
@@ -325,20 +456,3 @@ BEGIN
 END//
 
 DELIMITER ;
-
--- 18. VERIFICACIÓN FINAL
-SELECT 'Tabla' as tipo, 'Registros' as cantidad
-UNION ALL
-SELECT 'Restaurantes', CAST(COUNT(*) AS CHAR) FROM restaurants
-UNION ALL  
-SELECT 'Usuarios Registrados', CAST(COUNT(*) AS CHAR) FROM registered_users
-UNION ALL
-SELECT 'Usuarios Temporales', CAST(COUNT(*) AS CHAR) FROM users
-UNION ALL
-SELECT 'Canciones', CAST(COUNT(*) AS CHAR) FROM songs
-UNION ALL
-SELECT 'Favoritos', CAST(COUNT(*) AS CHAR) FROM favorites
-UNION ALL
-SELECT 'Listas Reproducción', CAST(COUNT(*) AS CHAR) FROM playlists
-UNION ALL
-SELECT 'Reviews', CAST(COUNT(*) AS CHAR) FROM restaurant_reviews;
