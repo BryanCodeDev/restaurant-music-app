@@ -53,12 +53,21 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
     setErrors({});
 
     try {
-      // Agregar tipo de usuario a los datos del form
-      const loginData = {
-        ...formData,
-        userType: isAdmin ? 'admin' : 'user'
-      };
-      await onLogin(loginData);
+      let response;
+      if (isAdmin) {
+        response = await apiService.loginRestaurant(formData.email, formData.password);
+        localStorage.setItem('user_type', 'restaurant');
+      } else {
+        response = await apiService.loginUser(formData.email, formData.password);
+        localStorage.setItem('user_type', 'registered');
+      }
+
+      if (response.access_token || (response.success && response.data?.access_token)) {
+        // Token ya guardado en apiService
+        await onLogin(response);
+      } else {
+        throw new Error(response.message || 'Error en la autenticación');
+      }
     } catch (error) {
       setErrors({ submit: error.message || 'Error al iniciar sesión' });
     }
@@ -83,8 +92,8 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center p-4 md:p-6 lg:p-8">
+      <div className="w-full max-w-md md:max-w-lg lg:max-w-xl xl:max-w-2xl">
         
         {/* Header */}
         <div className="text-center mb-8">
@@ -165,8 +174,8 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
         </div>
 
         {/* Form */}
-        <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8">
-          <div className="space-y-6">
+        <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 md:p-8 lg:p-10">
+          <div className="space-y-4 md:space-y-6">
             
             {/* Email Field */}
             <div>
@@ -174,14 +183,14 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
                 Email *
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 md:h-5 text-slate-400" />
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
+                  className={`w-full pl-10 md:pl-12 pr-4 py-3 md:py-3.5 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
                     isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-blue-500'
-                  } transition-all duration-200 ${
+                  } transition-all duration-200 text-sm md:text-base ${
                     errors.email ? 'border-red-500' : 'border-slate-600'
                   }`}
                   placeholder={isAdmin ? 'admin@restaurante.com' : 'tu@email.com'}
@@ -203,14 +212,14 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
                 Contraseña *
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 md:h-5 text-slate-400" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full pl-12 pr-12 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
+                  className={`w-full pl-10 md:pl-12 pr-10 md:pr-12 py-3 md:py-3.5 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
                     isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-blue-500'
-                  } transition-all duration-200 ${
+                  } transition-all duration-200 text-sm md:text-base ${
                     errors.password ? 'border-red-500' : 'border-slate-600'
                   }`}
                   placeholder="••••••••"
@@ -223,7 +232,7 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
                   disabled={isLoading}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-4 md:h-5" /> : <Eye className="h-4 md:h-5" />}
                 </button>
               </div>
               {errors.password && (
@@ -262,9 +271,9 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
               type="button"
               onClick={handleSubmit}
               disabled={isLoading}
-              className={`w-full flex items-center justify-center space-x-2 py-4 bg-gradient-to-r ${
-                isAdmin 
-                  ? 'from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 shadow-yellow-500/25' 
+              className={`w-full flex items-center justify-center space-x-2 py-3 md:py-4 text-sm md:text-base bg-gradient-to-r ${
+                isAdmin
+                  ? 'from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 shadow-yellow-500/25'
                   : 'from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-blue-500/25'
               } text-white rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
             >
@@ -283,12 +292,12 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
             </button>
 
             {/* Features Info */}
-            <div className={`mt-6 p-4 ${
-              isAdmin 
-                ? 'bg-yellow-500/10 border-yellow-500/30' 
+            <div className={`mt-4 md:mt-6 p-3 md:p-4 ${
+              isAdmin
+                ? 'bg-yellow-500/10 border-yellow-500/30'
                 : 'bg-blue-500/10 border-blue-500/30'
             } border rounded-xl`}>
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-2 md:space-x-3">
                 {isAdmin ? (
                   <Building2 className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
                 ) : (
@@ -321,23 +330,6 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
               </div>
             </div>
 
-            {/* Demo Credentials */}
-            <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
-              <p className="text-xs text-slate-400 mb-2 font-medium">Credenciales de prueba:</p>
-              <div className="text-xs text-slate-400 space-y-1">
-                {isAdmin ? (
-                  <>
-                    <p>Email: <span className="text-yellow-400">admin@laterraza.com</span></p>
-                    <p>Password: <span className="text-yellow-400">demo123</span></p>
-                  </>
-                ) : (
-                  <>
-                    <p>Email: <span className="text-blue-400">usuario@demo.com</span></p>
-                    <p>Password: <span className="text-blue-400">demo123</span></p>
-                  </>
-                )}
-              </div>
-            </div>
           </div>
         </div>
 

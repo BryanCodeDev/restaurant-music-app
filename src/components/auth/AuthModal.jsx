@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { X, Heart, User, Mail, Lock } from 'lucide-react';
 
+import apiService from '../../services/apiService';
+
 const AuthModal = ({ isOpen, onClose, onSuccess, restaurantName }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -23,14 +25,27 @@ const AuthModal = ({ isOpen, onClose, onSuccess, restaurantName }) => {
         return;
       }
 
-      // Aquí conectarías con tu API de autenticación
-      // const response = await apiService.register/login(formData);
-      
-      // Por ahora, simular éxito
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      onSuccess();
-      onClose();
+      let response;
+      if (isLogin) {
+        response = await apiService.loginUser(formData.email, formData.password);
+        localStorage.setItem('user_type', 'registered');
+      } else {
+        const registerData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        };
+        response = await apiService.registerUser(registerData);
+        localStorage.setItem('user_type', 'registered');
+      }
+
+      if (response.access_token || (response.success && response.data?.access_token)) {
+        // Token ya guardado en apiService
+        onSuccess(response);
+        onClose();
+      } else {
+        throw new Error(response.message || (isLogin ? 'Error al iniciar sesión' : 'Error al crear la cuenta'));
+      }
     } catch (err) {
       setError(err.message || 'Error al procesar la solicitud');
     } finally {

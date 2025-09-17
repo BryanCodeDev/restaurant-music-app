@@ -32,8 +32,8 @@ import SpotifyLogin from './components/music/SpotifyLogin';
 
 function App() {
   // App State Management
-  const [appMode, setAppMode] = useState('customer'); // 'customer', 'admin'
-  const [currentStep, setCurrentStep] = useState('restaurant-selection');
+  const [appMode, setAppMode] = useState(() => localStorage.getItem('appMode') || 'customer'); // 'customer', 'admin'
+  const [currentStep, setCurrentStep] = useState(() => localStorage.getItem('currentStep') || 'restaurant-selection');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
   const [authError, setAuthError] = useState(null);
@@ -47,11 +47,10 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Music App State
-  const [currentView, setCurrentView] = useState('home');
+  const [currentView, setCurrentView] = useState(() => localStorage.getItem('currentView') || 'home');
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(75);
-  const [isLoading, setIsLoading] = useState(true);
+  const [volume, setVolume] = useState(() => parseInt(localStorage.getItem('volume')) || 75);
 
   // Use the restaurant music hook - pass null when no restaurant selected
   const restaurantMusic = useRestaurantMusic(selectedRestaurant?.slug);
@@ -60,6 +59,49 @@ function App() {
   useEffect(() => {
     initializeApp();
   }, []);
+
+  // Persist app state to localStorage
+  useEffect(() => {
+    localStorage.setItem('appMode', appMode);
+    localStorage.setItem('currentStep', currentStep);
+    localStorage.setItem('currentView', currentView);
+    if (selectedRestaurant?.slug) {
+      localStorage.setItem('selectedRestaurantSlug', selectedRestaurant.slug);
+    }
+    localStorage.setItem('volume', volume.toString());
+  }, [appMode, currentStep, currentView, selectedRestaurant, volume]);
+
+  // Restore selected restaurant if slug saved
+  useEffect(() => {
+    const savedSlug = localStorage.getItem('selectedRestaurantSlug');
+    if (savedSlug && !selectedRestaurant) {
+      const restoreRestaurant = async () => {
+        try {
+          const restaurant = await apiService.getRestaurantBySlug(savedSlug);
+          if (restaurant && restaurant.success) {
+            setSelectedRestaurant(restaurant.data);
+            setCurrentStep('music-app');
+          } else {
+            localStorage.removeItem('selectedRestaurantSlug');
+            setCurrentStep('restaurant-selection');
+          }
+        } catch (error) {
+          console.error('Failed to restore restaurant:', error);
+          localStorage.removeItem('selectedRestaurantSlug');
+          setCurrentStep('restaurant-selection');
+        }
+      };
+      restoreRestaurant();
+    }
+  }, [selectedRestaurant]);
+
+  // Guard against invalid state: if music-app but no restaurant, go to selection
+  useEffect(() => {
+    if (currentStep === 'music-app' && !selectedRestaurant) {
+      setCurrentStep('restaurant-selection');
+      localStorage.removeItem('selectedRestaurantSlug');
+    }
+  }, [currentStep, selectedRestaurant]);
 
   // Auto-update current song from requests
   useEffect(() => {
@@ -79,8 +121,6 @@ function App() {
   }, [restaurantMusic?.requests, appMode, currentSong, restaurantMusic?.planType, restaurantMusic?.spotifyConnected]);
 
   const initializeApp = async () => {
-    setIsLoading(true);
-    
     try {
       // Check for admin session
       const adminToken = localStorage.getItem('admin_token');
@@ -131,13 +171,21 @@ function App() {
         }
       }
 
-      // Default to restaurant selection
-      setCurrentStep('restaurant-selection');
+      // Restore saved state if valid session/session invalid
+      const savedStep = localStorage.getItem('currentStep');
+      const savedView = localStorage.getItem('currentView');
+      if (savedStep && savedView) {
+        setCurrentStep(savedStep);
+        setCurrentView(savedView);
+      } else {
+        setCurrentStep('restaurant-selection');
+        setCurrentView('home');
+      }
     } catch (error) {
       console.error('App initialization error:', error);
       setCurrentStep('restaurant-selection');
     } finally {
-      setIsLoading(false);
+      // No loading state anymore
     }
   };
 
@@ -198,7 +246,11 @@ function App() {
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('musicmenu_user');
+    localStorage.removeItem('currentView');
+    localStorage.removeItem('selectedRestaurantSlug');
     setCurrentView('home');
+    setCurrentStep('restaurant-selection');
+    setSelectedRestaurant(null);
   };
 
   const handleProfile = () => {
@@ -263,6 +315,8 @@ function App() {
   const handleAdminLogout = () => {
     apiService.clearSession();
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('currentView');
+    localStorage.removeItem('selectedRestaurantSlug');
     setAdminUser(null);
     setAppMode('customer');
     setCurrentStep('restaurant-selection');
@@ -377,32 +431,13 @@ function App() {
     setAuthError(null);
   };
 
-  // Loading Screen
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative mb-6">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <h2 className="text-xl font-semibold text-white mb-2">Cargando MusicMenu</h2>
-          <p className="text-slate-400">Inicializando la aplicación...</p>
-        </div>
-      </div>
-    );
-  }
 
   // Render Customer Music App
   const renderMusicApp = () => {
     if (!selectedRestaurant) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-300">Cargando restaurante...</p>
-          </div>
-        </div>
-      );
+      // Redirect to selection instead of loading
+      setCurrentStep('restaurant-selection');
+      return null; // Or render selector, but useEffect will handle
     }
 
     // Provide safe defaults for restaurantMusic

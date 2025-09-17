@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  User, 
+import {
+  User,
   Crown,
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   ArrowRight,
   AlertCircle,
   Headphones,
@@ -19,6 +19,8 @@ import {
   CheckCircle,
   Shield
 } from 'lucide-react';
+
+import apiService from '../../services/apiService';
 
 const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, error }) => {
   const [isRestaurant, setIsRestaurant] = useState(false); // false = Usuario registrado, true = Restaurante
@@ -177,7 +179,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
           phone: formData.phone,
           dateOfBirth: formData.dateOfBirth,
           preferredGenres: formData.preferredGenres,
-          acceptMarketing: formData.acceptMarketing
+          preferredLanguages: ['es']
         };
         response = await apiService.registerUser(userData);
         localStorage.setItem('user_type', 'registered');
@@ -797,17 +799,17 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
               </div>
             </div>
 
-            {/* Demo Info */}
+            {/* Security Info */}
             <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
               <div className="flex items-start space-x-2">
                 <Shield className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-xs text-slate-400 mb-1">
-                    <span className="font-medium text-blue-400">Seguridad garantizada:</span> 
+                  <p className="text-xs text-slate-400">
+                    <span className="font-medium text-blue-400">Seguridad garantizada:</span>
                     Todos tus datos están protegidos con encriptación de última generación.
                   </p>
                   {isRestaurant && (
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 mt-1">
                       Tu restaurante será verificado en 24-48 horas para garantizar la calidad del servicio.
                     </p>
                   )}
