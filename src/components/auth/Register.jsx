@@ -326,7 +326,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Campos específicos para Admin */}
-            {isAdmin && (
+            {isRestaurant && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -375,7 +375,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             )}
 
             {/* Campo de nombre (para usuarios normales) */}
-            {!isAdmin && (
+            {!isRestaurant && (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Nombre completo *
@@ -405,7 +405,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                {isAdmin ? 'Email corporativo *' : 'Email *'}
+                {isRestaurant ? 'Email corporativo *' : 'Email *'}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -467,7 +467,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   </p>
                 )}
                 <p className="mt-1 text-xs text-slate-500">
-                  {isAdmin ? 'Mínimo 8 caracteres' : 'Mínimo 6 caracteres'}
+                  {isRestaurant ? 'Mínimo 8 caracteres' : 'Mínimo 6 caracteres'}
                 </p>
               </div>
 
@@ -510,7 +510,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             {/* Phone Field */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Teléfono {isAdmin && '*'}
+                Teléfono {isRestaurant && '*'}
               </label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
@@ -528,7 +528,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             </div>
 
             {/* Campos adicionales para Admin */}
-            {isAdmin && (
+            {isRestaurant && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -602,7 +602,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             )}
 
             {/* Campos adicionales para Usuario normal */}
-            {!isAdmin && (
+            {!isRestaurant && (
               <>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -670,13 +670,13 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   <span className="text-slate-300">
                     Acepto los{' '}
                     <button type="button" className={`${
-                      isAdmin ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'
+                      isRestaurant ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'
                     } underline transition-colors`}>
                       términos de servicio
                     </button>{' '}
                     y la{' '}
                     <button type="button" className={`${
-                      isAdmin ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'
+                      isRestaurant ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'
                     } underline transition-colors`}>
                       política de privacidad
                     </button>
@@ -806,7 +806,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     <span className="font-medium text-blue-400">Seguridad garantizada:</span> 
                     Todos tus datos están protegidos con encriptación de última generación.
                   </p>
-                  {isAdmin && (
+                  {isRestaurant && (
                     <p className="text-xs text-slate-500">
                       Tu restaurante será verificado en 24-48 horas para garantizar la calidad del servicio.
                     </p>
@@ -825,7 +825,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
               type="button"
               onClick={onSwitchToLogin}
               className={`${
-                isAdmin ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'
+                isRestaurant ? 'text-yellow-400 hover:text-yellow-300' : 'text-emerald-400 hover:text-emerald-300'
               } font-medium transition-colors`}
               disabled={isLoading}
             >
@@ -857,7 +857,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             <p className="text-xs text-slate-500">
               Al crear tu cuenta, aceptas nuestros términos de servicio y política de privacidad.
               <br />
-              {isAdmin 
+              {isRestaurant 
                 ? 'Procesamos tu información de forma segura para verificar tu establecimiento.' 
                 : 'Tus preferencias musicales nos ayudan a personalizar tu experiencia.'
               }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   User,
+  Crown,
   Building2,
   Headphones,
   Mail,

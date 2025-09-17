@@ -7,7 +7,10 @@ import {
   Star, 
   Trash2,
   SortDesc,
-  Filter
+  Filter,
+  AlertCircle,
+  User,
+  LogIn
 } from 'lucide-react';
 
 const Favorites = ({ 
@@ -19,6 +22,11 @@ const Favorites = ({
   const [requestingId, setRequestingId] = useState(null);
   const [sortBy, setSortBy] = useState('dateAdded'); // 'dateAdded', 'title', 'artist'
   const [filterGenre, setFilterGenre] = useState('all');
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const userType = localStorage.getItem('user_type') || 'guest';
+  const isAuthenticated = !!localStorage.getItem('auth_token');
 
   // Obtener géneros únicos de favoritos
   const availableGenres = [...new Set(favorites.map(fav => fav.genre))].filter(Boolean);
@@ -34,10 +42,31 @@ const Favorites = ({
     }
   };
 
-  const handleRemoveFavorite = async (song) => {
-    if (onToggleFavorite) {
-      await onToggleFavorite(song);
+  const handleToggleFavorite = async (song) => {
+    if (!isAuthenticated || userType !== 'registered') {
+      setErrorMessage('Para agregar/quitar de favoritos, debes registrarte e iniciar sesión como usuario.');
+      setShowAuthModal(true);
+      return;
     }
+
+    if (onToggleFavorite) {
+      try {
+        await onToggleFavorite(song);
+      } catch (err) {
+        setErrorMessage('Error al actualizar favoritos: ' + err.message);
+        setShowAuthModal(true);
+      }
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowAuthModal(false);
+    setErrorMessage('');
+  };
+
+  const handleLoginRedirect = () => {
+    alert('Para continuar, inicia sesión desde el menú principal.');
+    handleCloseModal();
   };
 
   const sortedAndFilteredFavorites = favorites
@@ -62,6 +91,36 @@ const Favorites = ({
     const seconds = duration % 60;
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  // Auth Modal
+  if (showAuthModal) {
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-slate-800 rounded-2xl p-6 max-w-md w-full border border-slate-700/50">
+          <div className="flex items-center space-x-3 mb-4">
+            <AlertCircle className="h-6 w-6 text-red-400" />
+            <h3 className="text-lg font-bold text-white">Acceso Requerido</h3>
+          </div>
+          <p className="text-slate-300 mb-6">{errorMessage}</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleLoginRedirect}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center space-x-2"
+            >
+              <LogIn className="h-4 w-4" />
+              <span>Iniciar Sesión</span>
+            </button>
+            <button
+              onClick={handleCloseModal}
+              className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 px-4 py-2 rounded-xl font-medium transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -165,11 +224,11 @@ const Favorites = ({
                 {/* Remove from Favorites Button */}
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
                   <button
-                    onClick={() => handleRemoveFavorite(song)}
+                    onClick={() => handleToggleFavorite(song)}
                     className="p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-full backdrop-blur-md transition-all duration-200"
-                    title="Quitar de favoritos"
+                    title={isAuthenticated && userType === 'registered' ? "Quitar de favoritos" : "Requiere inicio de sesión"}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Heart className="h-4 w-4" />
                   </button>
                 </div>
 

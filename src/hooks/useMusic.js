@@ -47,6 +47,9 @@ export const useMusic = (restaurantSlug) => {
     } finally {
       setLoading(false);
     }
+
+    // Cargar requests del usuario
+    await loadUserRequests();
   };
 
   const loadSongs = async (filters = {}) => {
@@ -63,10 +66,35 @@ export const useMusic = (restaurantSlug) => {
     }
   };
 
+  const loadUserRequests = async () => {
+    if (!user?.tableNumber || !restaurantSlug) return;
+
+    try {
+      const userRequests = await apiService.getUserRequests(restaurantSlug, user.tableNumber);
+      if (userRequests && userRequests.requests) {
+        setRequests(userRequests.requests);
+      } else {
+        setRequests([]);
+      }
+    } catch (err) {
+      console.error('Error loading user requests:', err);
+      setRequests([]);
+    }
+  };
+
   const addRequest = async (song) => {
     if (!user?.tableNumber) {
       setError('Sesión no encontrada');
       return false;
+    }
+
+    // Verificar límite para guests
+    if (userType === 'guest') {
+      const activeRequests = requests.filter(r => ['pending', 'playing'].includes(r.status)).length;
+      if (activeRequests >= 2) {
+        setError('Solo puedes solicitar 2 canciones a la vez como invitado. Espera a que se reproduzcan las actuales.');
+        return false;
+      }
     }
 
     try {
@@ -79,8 +107,9 @@ export const useMusic = (restaurantSlug) => {
       );
       
       if (response && response.request) {
-        // Actualizar lista de peticiones local
+        // Actualizar lista de peticiones local y recargar para sync
         setRequests(prev => [...prev, response.request]);
+        await loadUserRequests();
         setError(null);
         return true;
       } else {
@@ -101,7 +130,8 @@ export const useMusic = (restaurantSlug) => {
 
     try {
       await apiService.cancelRequest(requestId, user.tableNumber);
-      setRequests(prev => prev.filter(r => r.id !== requestId));
+      // Recargar requests para sync
+      await loadUserRequests();
       return true;
     } catch (err) {
       setError(err.message);

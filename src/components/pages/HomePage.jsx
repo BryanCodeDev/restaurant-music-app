@@ -1,8 +1,9 @@
 import React from 'react';
-import { 
-  Music, 
-  Clock, 
-  Heart, 
+import {
+  Music,
+  Clock,
+  Heart,
+  Star,
   TrendingUp,
   Users,
   PlayCircle,

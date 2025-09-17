@@ -9,6 +9,9 @@ import HomePage from './components/pages/HomePage';
 import BrowseMusic from './components/pages/BrowseMusic';
 import MyRequests from './components/pages/MyRequests';
 import Favorites from './components/pages/Favorites';
+import ListeningHistory from './components/pages/ListeningHistory';
+import RestaurantReviews from './components/pages/RestaurantReviews';
+import PlaylistManager from './components/music/PlaylistManager';
 
 // SaaS Components
 import RestaurantSelector from './components/pages/RestaurantSelector';
@@ -483,7 +486,7 @@ function App() {
               currentSong={currentSong}
               onRequestSong={safeRestaurantMusic.addRequest}
             >
-              <Favorites 
+              <Favorites
                 favorites={safeRestaurantMusic.favorites}
                 onToggleFavorite={safeRestaurantMusic.toggleFavorite}
                 onAddRequest={safeRestaurantMusic.addRequest}
@@ -491,10 +494,36 @@ function App() {
               />
             </UserLimitManager>
           );
+        case 'playlists':
+          if (!isAuthenticated || currentUser.type !== 'registered') {
+            return <div className="text-center p-8">Debes iniciar sesión como usuario registrado para acceder a playlists.</div>;
+          }
+          return (
+            <PlaylistManager
+              userId={localStorage.getItem('registered_user_id')}
+              restaurantSlug={selectedRestaurant.slug}
+            />
+          );
+        case 'history':
+          if (!isAuthenticated || currentUser.type !== 'registered') {
+            return <div className="text-center p-8">Debes iniciar sesión como usuario registrado para acceder al historial.</div>;
+          }
+          return (
+            <ListeningHistory
+              userId={localStorage.getItem('registered_user_id')}
+              restaurantSlug={selectedRestaurant.slug}
+            />
+          );
+        case 'reviews':
+          return (
+            <RestaurantReviews
+              restaurantSlug={selectedRestaurant.slug}
+            />
+          );
         default:
           return (
-            <HomePage 
-              onViewChange={setCurrentView} 
+            <HomePage
+              onViewChange={setCurrentView}
               restaurant={selectedRestaurant}
               userSession={safeRestaurantMusic.userSession}
             />

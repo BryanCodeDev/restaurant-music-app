@@ -1,5 +1,5 @@
 // src/hooks/useRestaurantMusic.js - SOLO API REAL
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import apiService from '../services/apiService';
 
 export const useRestaurantMusic = (restaurantSlug) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   Play, 
@@ -11,8 +11,49 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-const MyRequests = ({ requests = [], userSession, onCancelRequest }) => {
+const MyRequests = ({ userSession, onCancelRequest, restaurantSlug }) => {
+  const [localRequests, setLocalRequests] = useState([]);
   const [cancelingId, setCancelingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pollingInterval, setPollingInterval] = useState(null);
+
+  const tableNumber = userSession?.tableNumber;
+
+  useEffect(() => {
+    if (!restaurantSlug || !tableNumber) {
+      setLoading(false);
+      return;
+    }
+
+    const loadRequests = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.getUserRequests(restaurantSlug, tableNumber);
+        if (response && response.requests) {
+          setLocalRequests(response.requests);
+        } else {
+          setLocalRequests([]);
+        }
+      } catch (err) {
+        console.error('Error loading requests:', err);
+        setLocalRequests([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRequests();
+
+    // Polling cada 10 segundos
+    const interval = setInterval(loadRequests, 10000);
+    setPollingInterval(interval);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [restaurantSlug, tableNumber]);
+
+  const requests = localRequests;
 
   const statusConfig = {
     pending: {
@@ -79,6 +120,17 @@ const MyRequests = ({ requests = [], userSession, onCancelRequest }) => {
 
   const totalRequests = requests.length;
   const activeRequests = groupedRequests.pending.length + groupedRequests.playing.length;
+
+  if (loading && localRequests.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Cargando peticiones...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
