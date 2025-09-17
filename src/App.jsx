@@ -18,7 +18,7 @@ import QueueManager from './components/admin/QueueManager';
 import MusicPlayer from './components/music/MusicPlayer';
 import UserLimitManager from './components/music/UserLimitManager';
 
-// Auth Components (nuevos)
+// Auth Components
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 
@@ -34,9 +34,7 @@ function App() {
   const [adminUser, setAdminUser] = useState(null);
   const [authError, setAuthError] = useState(null);
   
-  // User Authentication State (nuevo)
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  // User Authentication State - SIN MODALES
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
@@ -87,7 +85,7 @@ function App() {
         }
       }
 
-      // Check for user session (nuevo)
+      // Check for user session
       const userSession = localStorage.getItem('musicmenu_user');
       if (userSession) {
         try {
@@ -129,16 +127,14 @@ function App() {
     }
   };
 
-  // User Authentication Handlers (nuevos)
+  // User Authentication Handlers - SIN MODALES
   const handleShowLogin = () => {
-    setAuthMode('login');
-    setShowAuthModal(true);
+    setCurrentView('login');
     setAuthError(null);
   };
 
   const handleShowRegister = () => {
-    setAuthMode('register');
-    setShowAuthModal(true);
+    setCurrentView('register');
     setAuthError(null);
   };
 
@@ -152,7 +148,7 @@ function App() {
         setCurrentUser(result.data);
         setIsAuthenticated(true);
         localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
-        setShowAuthModal(false);
+        setCurrentView('home'); // Volver a home después del login
       } else {
         throw new Error(result.message || 'Error al iniciar sesión');
       }
@@ -173,7 +169,7 @@ function App() {
         setCurrentUser(result.data);
         setIsAuthenticated(true);
         localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
-        setShowAuthModal(false);
+        setCurrentView('home'); // Volver a home después del registro
       } else {
         throw new Error(result.message || 'Error al registrar usuario');
       }
@@ -188,7 +184,7 @@ function App() {
     setCurrentUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem('musicmenu_user');
-    setShowAuthModal(false);
+    setCurrentView('home');
   };
 
   const handleProfile = () => {
@@ -382,45 +378,6 @@ function App() {
     );
   }
 
-  // Render User Auth Modal (nuevo)
-  const renderAuthModal = () => {
-    if (!showAuthModal) return null;
-
-    const handleCloseModal = () => {
-      setShowAuthModal(false);
-      setAuthError(null);
-    };
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center">
-        {/* Backdrop */}
-        <div 
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={handleCloseModal}
-        />
-        
-        {/* Modal */}
-        <div className="relative z-10 w-full max-w-md mx-4">
-          {authMode === 'login' ? (
-            <Login
-              onLogin={handleUserLogin}
-              onSwitchToRegister={() => setAuthMode('register')}
-              onSwitchToCustomer={handleCloseModal}
-              isLoading={false}
-              error={authError}
-            />
-          ) : (
-            <Register
-              onRegister={handleUserRegister}
-              onSwitchToLogin={() => setAuthMode('login')}
-              onSwitchToCustomer={handleCloseModal}
-            />
-          )}
-        </div>
-      </div>
-    );
-  };
-
   // Render Customer Music App
   const renderMusicApp = () => {
     if (!selectedRestaurant) {
@@ -469,6 +426,29 @@ function App() {
               stats={safeRestaurantMusic.stats}
             />
           );
+
+        case 'login':
+          return (
+            <Login 
+              onLogin={handleUserLogin}
+              onSwitchToRegister={() => setCurrentView('register')}
+              onSwitchToCustomer={() => setCurrentView('home')}
+              isLoading={false}
+              error={authError}
+            />
+          );
+
+        case 'register':
+          return (
+            <Register 
+              onRegister={handleUserRegister}
+              onSwitchToLogin={() => setCurrentView('login')}
+              onSwitchToCustomer={() => setCurrentView('home')}
+              isLoading={false}
+              error={authError}
+            />
+          );
+
         case 'browse':
           return (
             <UserLimitManager
@@ -543,13 +523,8 @@ function App() {
           {renderCurrentView()}
         </main>
         
-        <Footer 
-          restaurant={selectedRestaurant} 
-          userTable={safeRestaurantMusic.userSession?.tableNumber} 
-        />
-        
-        {/* Music Player */}
-        {currentSong && (
+        {/* Music Player - Solo mostrar si NO está en vistas de auth */}
+        {currentSong && !['login', 'register'].includes(currentView) && (
           <MusicPlayer
             currentSong={currentSong}
             queue={safeRestaurantMusic.requests?.filter(req => req.status === 'pending') || []}
@@ -564,8 +539,13 @@ function App() {
           />
         )}
 
-        {/* Auth Modal */}
-        {renderAuthModal()}
+        {/* Footer - Solo mostrar si NO está en vistas de auth */}
+        {!['login', 'register'].includes(currentView) && (
+          <Footer 
+            restaurant={selectedRestaurant} 
+            userTable={safeRestaurantMusic.userSession?.tableNumber} 
+          />
+        )}
       </div>
     );
   };

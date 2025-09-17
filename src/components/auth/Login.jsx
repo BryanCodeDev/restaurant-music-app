@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  Crown, 
+  User, 
+  Crown,
   Mail, 
   Lock, 
   Eye, 
@@ -9,10 +10,13 @@ import {
   AlertCircle,
   Headphones,
   LogIn,
+  Heart,
+  Music,
   Building2
 } from 'lucide-react';
 
 const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, error }) => {
+  const [isAdmin, setIsAdmin] = useState(false); // false = Usuario, true = Administrador
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -47,7 +51,12 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
     setErrors({});
 
     try {
-      await onLogin(formData);
+      // Agregar tipo de usuario a los datos del form
+      const loginData = {
+        ...formData,
+        userType: isAdmin ? 'admin' : 'user'
+      };
+      await onLogin(loginData);
     } catch (error) {
       setErrors({ submit: error.message || 'Error al iniciar sesión' });
     }
@@ -63,6 +72,14 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
     }
   };
 
+  const handleToggleUserType = () => {
+    setIsAdmin(!isAdmin);
+    // Limpiar errores al cambiar tipo
+    setErrors({});
+    // Opcional: limpiar formulario al cambiar tipo
+    // setFormData({ email: '', password: '' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -71,24 +88,83 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
         <div className="text-center mb-8">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full opacity-20 blur-lg animate-pulse"></div>
+              <div className={`absolute inset-0 bg-gradient-to-r ${
+                isAdmin 
+                  ? 'from-yellow-500 to-amber-600' 
+                  : 'from-blue-500 to-purple-600'
+              } rounded-full opacity-20 blur-lg animate-pulse`}></div>
               <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-full border border-slate-700/50">
-                <Crown className="h-12 w-12 text-yellow-400" />
+                {isAdmin ? (
+                  <Crown className="h-12 w-12 text-yellow-400" />
+                ) : (
+                  <User className="h-12 w-12 text-blue-400" />
+                )}
               </div>
             </div>
           </div>
           
-          <h1 className="text-3xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-            Acceso Administrativo
+          <h1 className={`text-3xl font-black bg-gradient-to-r ${
+            isAdmin 
+              ? 'from-yellow-400 to-amber-400' 
+              : 'from-blue-400 to-purple-400'
+          } bg-clip-text text-transparent mb-2`}>
+            {isAdmin ? 'Acceso Administrativo' : 'Iniciar Sesión'}
           </h1>
           <p className="text-slate-300">
-            Inicia sesión en tu panel de control
+            {isAdmin 
+              ? 'Inicia sesión en tu panel de control'
+              : 'Accede a tu cuenta y disfruta de la experiencia musical'
+            }
           </p>
+        </div>
+
+        {/* User Type Toggle */}
+        <div className="mb-8">
+          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-1">
+            <div className="flex relative">
+              {/* Toggle Background */}
+              <div 
+                className={`absolute inset-y-1 w-1/2 bg-gradient-to-r ${
+                  isAdmin 
+                    ? 'from-yellow-500/20 to-amber-500/20 translate-x-full border-yellow-500/30' 
+                    : 'from-blue-500/20 to-purple-500/20 translate-x-0 border-blue-500/30'
+                } border rounded-xl transition-all duration-300 ease-in-out`}
+              />
+              
+              {/* Usuario Option */}
+              <button
+                type="button"
+                onClick={() => !isAdmin || handleToggleUserType()}
+                className={`relative z-10 flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  !isAdmin 
+                    ? 'text-blue-300' 
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <User className="h-5 w-5" />
+                <span>Usuario</span>
+              </button>
+              
+              {/* Administrador Option */}
+              <button
+                type="button"
+                onClick={() => isAdmin || handleToggleUserType()}
+                className={`relative z-10 flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  isAdmin 
+                    ? 'text-yellow-300' 
+                    : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <Crown className="h-5 w-5" />
+                <span>Administrador</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Form */}
         <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
             
             {/* Email Field */}
             <div>
@@ -101,10 +177,12 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={`w-full pl-12 pr-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                  className={`w-full pl-12 pr-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
+                    isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-blue-500'
+                  } transition-all duration-200 ${
                     errors.email ? 'border-red-500' : 'border-slate-600'
                   }`}
-                  placeholder="admin@restaurante.com"
+                  placeholder={isAdmin ? 'admin@restaurante.com' : 'tu@email.com'}
                   autoComplete="email"
                   disabled={isLoading}
                 />
@@ -128,7 +206,9 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full pl-12 pr-12 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 ${
+                  className={`w-full pl-12 pr-12 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
+                    isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-blue-500'
+                  } transition-all duration-200 ${
                     errors.password ? 'border-red-500' : 'border-slate-600'
                   }`}
                   placeholder="••••••••"
@@ -156,7 +236,9 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
             <div className="text-right">
               <button
                 type="button"
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                className={`text-sm ${
+                  isAdmin ? 'text-yellow-400 hover:text-yellow-300' : 'text-blue-400 hover:text-blue-300'
+                } transition-colors`}
                 disabled={isLoading}
               >
                 ¿Olvidaste tu contraseña?
@@ -175,9 +257,14 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
 
             {/* Submit Button */}
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               disabled={isLoading}
-              className="w-full flex items-center justify-center space-x-2 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-bold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className={`w-full flex items-center justify-center space-x-2 py-4 bg-gradient-to-r ${
+                isAdmin 
+                  ? 'from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 shadow-yellow-500/25' 
+                  : 'from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-blue-500/25'
+              } text-white rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
             >
               {isLoading ? (
                 <>
@@ -194,16 +281,39 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
             </button>
 
             {/* Features Info */}
-            <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+            <div className={`mt-6 p-4 ${
+              isAdmin 
+                ? 'bg-yellow-500/10 border-yellow-500/30' 
+                : 'bg-blue-500/10 border-blue-500/30'
+            } border rounded-xl`}>
               <div className="flex items-start space-x-3">
-                <Building2 className="h-5 w-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                {isAdmin ? (
+                  <Building2 className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <Heart className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                )}
                 <div>
-                  <h4 className="font-semibold text-blue-400 mb-2">Panel de Administración</h4>
+                  <h4 className={`font-semibold ${
+                    isAdmin ? 'text-yellow-400' : 'text-blue-400'
+                  } mb-2`}>
+                    {isAdmin ? 'Panel de Administración' : 'Con tu cuenta puedes'}
+                  </h4>
                   <ul className="text-sm text-slate-300 space-y-1">
-                    <li>• Gestión de cola musical en tiempo real</li>
-                    <li>• Estadísticas de uso y peticiones</li>
-                    <li>• Control de reproducción y volumen</li>
-                    <li>• Configuración de límites y restricciones</li>
+                    {isAdmin ? (
+                      <>
+                        <li>• Gestión de cola musical en tiempo real</li>
+                        <li>• Estadísticas de uso y peticiones</li>
+                        <li>• Control de reproducción y volumen</li>
+                        <li>• Configuración de límites y restricciones</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Guardar tus canciones favoritas</li>
+                        <li>• Ver tu historial de peticiones</li>
+                        <li>• Crear listas personalizadas</li>
+                        <li>• Recibir recomendaciones musicales</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -213,11 +323,20 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
             <div className="mt-4 p-3 bg-slate-700/30 rounded-lg border border-slate-600/30">
               <p className="text-xs text-slate-400 mb-2 font-medium">Credenciales de prueba:</p>
               <div className="text-xs text-slate-400 space-y-1">
-                <p>Email: <span className="text-blue-400">admin@laterraza.com</span></p>
-                <p>Password: <span className="text-blue-400">demo123</span></p>
+                {isAdmin ? (
+                  <>
+                    <p>Email: <span className="text-yellow-400">admin@laterraza.com</span></p>
+                    <p>Password: <span className="text-yellow-400">demo123</span></p>
+                  </>
+                ) : (
+                  <>
+                    <p>Email: <span className="text-blue-400">usuario@demo.com</span></p>
+                    <p>Password: <span className="text-blue-400">demo123</span></p>
+                  </>
+                )}
               </div>
             </div>
-          </form>
+          </div>
         </div>
 
         {/* Footer */}
@@ -227,10 +346,12 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
             <button
               type="button"
               onClick={onSwitchToRegister}
-              className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+              className={`${
+                isAdmin ? 'text-yellow-400 hover:text-yellow-300' : 'text-blue-400 hover:text-blue-300'
+              } font-medium transition-colors`}
               disabled={isLoading}
             >
-              Registra tu restaurante
+              {isAdmin ? 'Registra tu restaurante' : 'Regístrate aquí'}
             </button>
           </p>
 
@@ -246,8 +367,8 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
             className="inline-flex items-center space-x-2 px-6 py-3 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-xl font-medium hover:bg-slate-800 hover:text-white transition-all duration-300"
             disabled={isLoading}
           >
-            <Headphones className="h-5 w-5" />
-            <span>Acceso como Cliente</span>
+            {isAdmin ? <Headphones className="h-5 w-5" /> : <Music className="h-5 w-5" />}
+            <span>{isAdmin ? 'Acceso como Cliente' : 'Continuar como Invitado'}</span>
           </button>
 
           <div className="mt-6 pt-6 border-t border-slate-700/50">

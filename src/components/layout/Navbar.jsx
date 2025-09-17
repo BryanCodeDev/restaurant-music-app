@@ -23,11 +23,11 @@ const Navbar = ({
   restaurant,
   userTable,
   onSwitchToAdmin,
-  // Nuevas props para autenticación
+  // Props para autenticación - ahora sin modales
   isAuthenticated = false,
   user = null,
-  onShowLogin,
-  onShowRegister,
+  onShowLogin, // Cambiará la vista a 'login'
+  onShowRegister, // Cambiará la vista a 'register'
   onLogout,
   onProfile,
   onSettings
@@ -66,6 +66,7 @@ const Navbar = ({
   };
 
   const handleShowLogin = () => {
+    // En lugar de mostrar modal, cambiar vista a 'login'
     if (onShowLogin) {
       onShowLogin();
     }
@@ -73,6 +74,7 @@ const Navbar = ({
   };
 
   const handleShowRegister = () => {
+    // En lugar de mostrar modal, cambiar vista a 'register'
     if (onShowRegister) {
       onShowRegister();
     }
@@ -82,6 +84,7 @@ const Navbar = ({
   const closeAllMenus = () => {
     setShowUserMenu(false);
     setShowAuthMenu(false);
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -113,42 +116,44 @@ const Navbar = ({
             </div>
           </div>
 
-          {/* Navigation Links - Desktop */}
-          <div className="hidden lg:block">
-            <div className="flex items-center space-x-2">
-              {navItems.map((item) => {
-                const IconComponent = item.icon;
-                const isActive = currentView === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item.id)}
-                    className={`
-                      group relative flex items-center space-x-3 px-4 py-2.5 rounded-xl font-medium text-sm
-                      transition-all duration-300 transform hover:scale-105
-                      ${isActive
-                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30 shadow-lg shadow-blue-500/10'
-                        : 'text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent hover:border-slate-700'
-                      }
-                    `}
-                  >
-                    <IconComponent className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                    <span>{item.label}</span>
-                    
-                    {isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-xl"></div>
-                    )}
-                  </button>
-                );
-              })}
+          {/* Navigation Links - Desktop - Solo mostrar si no está en vistas de auth */}
+          {!['login', 'register'].includes(currentView) && (
+            <div className="hidden lg:block">
+              <div className="flex items-center space-x-2">
+                {navItems.map((item) => {
+                  const IconComponent = item.icon;
+                  const isActive = currentView === item.id;
+                  
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleNavClick(item.id)}
+                      className={`
+                        group relative flex items-center space-x-3 px-4 py-2.5 rounded-xl font-medium text-sm
+                        transition-all duration-300 transform hover:scale-105
+                        ${isActive
+                          ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30 shadow-lg shadow-blue-500/10'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent hover:border-slate-700'
+                        }
+                      `}
+                    >
+                      <IconComponent className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+                      <span>{item.label}</span>
+                      
+                      {isActive && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-xl"></div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Right Side Controls */}
           <div className="flex items-center space-x-3">
-            {/* Restaurant Info - Desktop */}
-            {restaurant && (
+            {/* Restaurant Info - Desktop - Solo mostrar si no está en vistas de auth */}
+            {restaurant && !['login', 'register'].includes(currentView) && (
               <div className="hidden lg:flex items-center space-x-3 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl">
                 <img 
                   src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=32&h=32&fit=crop"}
@@ -339,24 +344,26 @@ const Navbar = ({
               </div>
             )}
 
-            {/* Mobile menu button */}
-            <div className="lg:hidden">
-              <button 
-                onClick={toggleMobileMenu}
-                className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </button>
-            </div>
+            {/* Mobile menu button - Solo mostrar si no está en vistas de auth */}
+            {!['login', 'register'].includes(currentView) && (
+              <div className="lg:hidden">
+                <button 
+                  onClick={toggleMobileMenu}
+                  className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
+                >
+                  {isMobileMenuOpen ? (
+                    <X className="h-6 w-6" />
+                  ) : (
+                    <Menu className="h-6 w-6" />
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Mobile Navigation Overlay */}
-        {isMobileMenuOpen && (
+        {/* Mobile Navigation Overlay - Solo mostrar si no está en vistas de auth */}
+        {isMobileMenuOpen && !['login', 'register'].includes(currentView) && (
           <>
             <div 
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -525,33 +532,35 @@ const Navbar = ({
           </>
         )}
 
-        {/* Bottom Navigation for Mobile - Alternative */}
-        <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 md:hidden">
-          <div className="grid grid-cols-4 gap-1 p-2">
-            {navItems.map((item) => {
-              const IconComponent = item.icon;
-              const isActive = currentView === item.id;
-              
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavClick(item.id)}
-                  className={`
-                    flex flex-col items-center justify-center py-3 px-2 rounded-xl text-xs font-medium
-                    transition-all duration-300 min-h-[60px]
-                    ${isActive
-                      ? 'bg-gradient-to-b from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                    }
-                  `}
-                >
-                  <IconComponent className={`h-5 w-5 mb-1 ${isActive ? 'scale-110' : ''} transition-transform duration-300`} />
-                  <span className="leading-tight text-center">{item.label}</span>
-                </button>
-              );
-            })}
+        {/* Bottom Navigation for Mobile - Alternative - Solo mostrar si no está en vistas de auth */}
+        {!['login', 'register'].includes(currentView) && (
+          <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 md:hidden">
+            <div className="grid grid-cols-4 gap-1 p-2">
+              {navItems.map((item) => {
+                const IconComponent = item.icon;
+                const isActive = currentView === item.id;
+                
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item.id)}
+                    className={`
+                      flex flex-col items-center justify-center py-3 px-2 rounded-xl text-xs font-medium
+                      transition-all duration-300 min-h-[60px]
+                      ${isActive
+                        ? 'bg-gradient-to-b from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      }
+                    `}
+                  >
+                    <IconComponent className={`h-5 w-5 mb-1 ${isActive ? 'scale-110' : ''} transition-transform duration-300`} />
+                    <span className="leading-tight text-center">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </nav>
   );

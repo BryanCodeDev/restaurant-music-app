@@ -1,4 +1,4 @@
-// src/services/apiService.js - VERSIÓN COMPLETAMENTE CORREGIDA
+// src/services/apiService.js - VERSIÓN UNIFICADA
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 class ApiService {
@@ -9,7 +9,6 @@ class ApiService {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Configuración por defecto
     const config = {
       headers: {
         'Content-Type': 'application/json',
@@ -18,7 +17,7 @@ class ApiService {
       ...options,
     };
 
-    // CORREGIDO: Usar un solo sistema de tokens
+    // Sistema unificado de tokens
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -55,16 +54,8 @@ class ApiService {
       return responseData;
       
     } catch (error) {
-      console.error(`API Error [${options.method || 'GET'}] ${endpoint}:`, {
-        message: error.message,
-        url,
-        options: {
-          ...options,
-          body: options.body ? '[BODY PRESENT]' : undefined
-        }
-      });
+      console.error(`API Error [${options.method || 'GET'}] ${endpoint}:`, error.message);
       
-      // Re-throw con mensaje más específico según el tipo de error
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error('Network error: Could not connect to server');
       }
@@ -77,7 +68,7 @@ class ApiService {
     }
   }
 
-  // ===== AUTHENTICATION - CORREGIDO =====
+  // ===== AUTHENTICATION =====
   
   async registerRestaurant(data) {
     const response = await this.request('/auth/register', {
@@ -85,10 +76,11 @@ class ApiService {
       body: data
     });
     
-    // CORREGIDO: Manejar estructura correcta { success, data: { restaurant, token } }
     if (response.success && response.data?.token) {
       localStorage.setItem('auth_token', response.data.token);
       return response.data;
+    } else if (response.token) {
+      localStorage.setItem('auth_token', response.token);
     }
     
     return response;
@@ -103,22 +95,28 @@ class ApiService {
     if (response.success && response.data?.token) {
       localStorage.setItem('auth_token', response.data.token);
       return response.data;
+    } else if (response.token) {
+      localStorage.setItem('auth_token', response.token);
     }
     
     return response;
   }
 
-  // CORREGIDO: Endpoint correcto para sesión de usuario
   async createUserSession(restaurantSlug, tableNumber = null) {
     const response = await this.request(`/auth/session/${restaurantSlug}`, {
       method: 'POST',
-      body: { tableNumber }
+      body: { 
+        tableNumber: tableNumber || `Mesa #${Math.floor(Math.random() * 20) + 1}`
+      }
     });
     
     if (response.success && response.data?.token) {
       localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('current_session', JSON.stringify(response.data));
       return response.data;
+    } else if (response.token) {
+      localStorage.setItem('auth_token', response.token);
+      localStorage.setItem('current_session', JSON.stringify(response));
     }
     
     return response;
@@ -137,10 +135,36 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
-  // ===== SONGS - CORREGIDO =====
+  // ===== RESTAURANTS =====
+  
+  async getPublicRestaurants(params = {}) {
+    const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+    
+    const queryString = new URLSearchParams(cleanParams).toString();
+    const endpoint = `/restaurants${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await this.request(endpoint);
+    return response.success ? response.data : response;
+  }
+
+  async getRestaurantBySlug(slug) {
+    const response = await this.request(`/restaurants/${slug}`);
+    return response.success ? response.data : response;
+  }
+
+  async getRestaurantStats(slug, period = '24h') {
+    const response = await this.request(`/restaurants/${slug}/stats?period=${period}`);
+    return response.success ? response.data : response;
+  }
+
+  // ===== SONGS =====
   
   async getSongs(restaurantSlug, params = {}) {
-    // Limpiar parámetros undefined
     const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         acc[key] = value;
@@ -185,14 +209,13 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
-  // ===== REQUESTS - CORREGIDO =====
+  // ===== REQUESTS =====
   
   async createRequest(restaurantSlug, songId, tableNumber) {
     if (!songId) {
       throw new Error('Song ID is required');
     }
     
-    // CORREGIDO: Usar endpoint correcto que coincide con requestController.js
     const response = await this.request(`/requests/${restaurantSlug}`, {
       method: 'POST',
       body: { songId, tableNumber }
@@ -246,6 +269,14 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
+  async updateRequestPosition(requestId, position) {
+    const response = await this.request(`/requests/${requestId}/position`, {
+      method: 'PATCH',
+      body: { position }
+    });
+    return response.success ? response.data : response;
+  }
+
   async getRequestStats(restaurantSlug, period = '24h') {
     const response = await this.request(`/requests/${restaurantSlug}/stats?period=${period}`);
     return response.success ? response.data : response;
@@ -266,34 +297,7 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
-  // ===== RESTAURANTS =====
-  
-  async getRestaurantBySlug(slug) {
-    const response = await this.request(`/restaurants/${slug}`);
-    return response.success ? response.data : response;
-  }
-
-  async getRestaurantStats(slug, period = '24h') {
-    const response = await this.request(`/restaurants/${slug}/stats?period=${period}`);
-    return response.success ? response.data : response;
-  }
-
-  async getPublicRestaurants(params = {}) {
-  const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      acc[key] = value;
-    }
-    return acc;
-  }, {});
-  
-  const queryString = new URLSearchParams(cleanParams).toString();
-  const endpoint = `/restaurants${queryString ? `?${queryString}` : ''}`;
-  
-  const response = await this.request(endpoint);
-  return response.success ? response.data : response;
-}
-
-  // ===== UTILITY METHODS - CORREGIDO =====
+  // ===== UTILITIES =====
   
   getCurrentSession() {
     try {
@@ -306,12 +310,10 @@ class ApiService {
   }
 
   clearSession() {
-    // CORREGIDO: Limpiar todos los tipos de tokens
     localStorage.removeItem('auth_token');
     localStorage.removeItem('current_session');
-    // Limpiar tokens antiguos también
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('user_token');
+    localStorage.removeItem('admin_token'); // Legacy
+    localStorage.removeItem('user_token');  // Legacy
   }
 
   isAuthenticated() {
@@ -322,7 +324,6 @@ class ApiService {
     return localStorage.getItem('auth_token');
   }
 
-  // Método para verificar la conectividad con el servidor
   async healthCheck() {
     try {
       const response = await fetch(`${this.baseURL}/health`, {
@@ -335,7 +336,6 @@ class ApiService {
     }
   }
 
-  // Método para retry automático en caso de fallos de red
   async requestWithRetry(endpoint, options = {}, maxRetries = 2) {
     let lastError;
     
@@ -353,7 +353,7 @@ class ApiService {
           throw error;
         }
         
-        // Esperar antes del siguiente intento (backoff exponencial)
+        // Esperar antes del siguiente intento
         if (i < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
         }
