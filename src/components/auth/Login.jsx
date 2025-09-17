@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  User, 
-  Crown,
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+import {
+  User,
+  Building2,
+  Headphones,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   ArrowRight,
   AlertCircle,
-  Headphones,
   LogIn,
   Heart,
-  Music,
-  Building2
+  Music
 } from 'lucide-react';
+
+import apiService from '../../services/apiService';
 
 const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, error }) => {
   const [isAdmin, setIsAdmin] = useState(false); // false = Usuario, true = Administrador

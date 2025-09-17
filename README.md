@@ -1,262 +1,100 @@
-# 🎵 Restaurant Music App - MusicMenu
+# Restaurant Music App
 
-Una aplicación interactiva para peticiones musicales en restaurantes que permite a los clientes pedir sus canciones favoritas y crear el ambiente perfecto mientras disfrutan su comida.
+Una aplicación web para que los clientes de restaurantes puedan solicitar música y los administradores gestionen la cola de reproducción.
 
-## ✨ Características Principales
+## Características Principales
 
-- 🎸 **Catálogo extenso de música** con filtros por género
-- 🔍 **Búsqueda inteligente** por título, artista o género
-- ❤️ **Sistema de favoritos** personalizado
-- ⏰ **Cola de peticiones en tiempo real** con estimación de tiempos
-- 📱 **Diseño completamente responsive** para móviles y tablets
-- 🎨 **Interfaz moderna** con efectos glassmorphism y gradientes
-- 🚀 **Performance optimizada** con lazy loading
-- 🔌 **Integración opcional con Spotify** para acceso a millones de canciones
+### Para Clientes
+- **Selección de Restaurante**: Elige entre múltiples restaurantes disponibles.
+- **Solicitud de Canciones**: Explora el catálogo musical y solicita canciones.
+- **Cola de Reproducción**: Ve el estado de tus peticiones y la cola general.
+- **Favoritos**: Guarda tus canciones favoritas (soporte para usuarios invitados y registrados).
+- **Nuevas Features**:
+  - **Usuarios Registrados**: Crea una cuenta para guardar favoritos permanentes, historial y playlists.
+  - **Playlists**: Crea y gestiona listas de reproducción personalizadas.
+  - **Historial de Reproducción**: Revisa las canciones que has escuchado recientemente.
+  - **Reseñas de Restaurantes**: Califica y comenta sobre la experiencia musical en restaurantes.
 
-## 🛠️ Tecnologías Utilizadas
+### Para Administradores de Restaurantes
+- **Panel de Administración**: Gestión completa de la cola musical en tiempo real.
+- **Estadísticas**: Visualiza métricas de uso y peticiones.
+- **Control de Reproducción**: Play, pause, siguiente, anterior y volumen.
+- **Gestión de Límites**: Configura límites por usuario y cola.
 
-- **React 18** - Framework principal
-- **Vite** - Build tool y dev server
-- **Tailwind CSS** - Styling y diseño responsive
-- **Lucide React** - Iconografía moderna
-- **Axios** - Cliente HTTP para APIs
-- **PostCSS** - Procesamiento de CSS
+## Requisitos de Base de Datos
 
-## 🚀 Instalación Rápida
+La aplicación usa MySQL con el esquema definido en `script2.sql`. Cambios clave respecto a versiones anteriores:
 
-### Prerrequisitos
-- Node.js (≥16.0.0)
-- npm (≥8.0.0)
+### Tablas Nuevas/Actualizadas
+- **registered_users**: Usuarios permanentes con campos como `preferred_genres`, `notification_preferences`, `is_premium`.
+- **users**: Ahora soporta `registered_user_id` para vincular sesiones de invitados a usuarios registrados.
+- **favorites**: Soporta `user_id` (invitados) y `registered_user_id` (registrados), con `favorite_type`.
+- **playlists** y **playlist_songs**: Gestión de listas de reproducción.
+- **listening_history**: Historial de reproducción por usuario registrado.
+- **restaurant_reviews**: Reseñas con ratings específicos para música, servicio y ambiente.
+- **auth_tokens**: Manejo de tokens de acceso y refresh para autenticación segura.
+- **restaurants**: Campos adicionales como `logo`, `cover_image`, `description`, `rating`, `total_reviews`, `cuisine_type`, `price_range`.
 
-### 1. Clonar y configurar el proyecto
+### Vistas y Procedimientos
+- **user_favorites_view**: Une favoritos de invitados y registrados.
+- **user_stats_view**: Estadísticas por tipo de usuario.
+- **GetUserProfile**: Procedimiento para obtener perfil completo por tipo de usuario.
 
-```bash
-# Crear el proyecto
-npm create vite@latest restaurant-music-app -- --template react
-cd restaurant-music-app
+Ejecuta `script2.sql` para configurar la base de datos. Asegúrate de que el backend esté actualizado para usar estos esquemas.
 
-# Instalar dependencias principales
-npm install
-npm install -D tailwindcss postcss autoprefixer
-npm install lucide-react axios
+## Instalación
 
-# Configurar Tailwind CSS
-npx tailwindcss init -p
-```
+### Requisitos
+- Node.js 18+
+- MySQL 8.0+
+- Backend actualizado (Node.js/Express)
 
-### 2. Configurar estructura de archivos
+### Frontend
+1. Clona el repositorio
+2. `cd restaurant-music-app`
+3. `npm install`
+4. Configura `.env` con `VITE_API_URL=http://localhost:5000/api/v1`
+5. `npm run dev`
 
-Crea la estructura de carpetas:
+### Backend
+- Usa el backend actualizado compatible con `script2.sql`.
+- Configura conexión a MySQL y ejecuta el script SQL.
+
+## Estructura del Proyecto
+
 ```
 src/
 ├── components/
-│   ├── layout/          # Navbar, Footer
-│   ├── music/           # SongCard, SearchBar, etc.
-│   ├── pages/           # HomePage, BrowseMusic, etc.
-│   └── common/          # Button, Modal
-├── data/                # mockData.js
-├── hooks/               # useMusicData.js
-├── utils/               # helpers.js
-├── App.jsx
-├── main.jsx
-└── index.css
+│   ├── auth/          # Login y Register para usuarios y restaurantes
+│   ├── admin/         # Dashboard y QueueManager
+│   ├── music/         # MusicPlayer, SongCard, etc.
+│   └── pages/         # HomePage, Favorites, Playlists, ListeningHistory, RestaurantReviews
+├── hooks/             # useMusic, useRestaurantMusic (actualizados para user_type)
+├── services/          # apiService (con métodos para nuevas features)
+└── App.jsx            # Rutas integradas para nuevas páginas
 ```
 
-### 3. Copiar los archivos del proyecto
+## Nuevas Features Implementadas
 
-Copia todos los archivos de código proporcionados en sus respectivas ubicaciones.
+- **Autenticación Avanzada**: Soporte para usuarios registrados con refresh tokens y verificación de email.
+- **Playlists**: Crea, edita y comparte listas desde la página de playlists.
+- **Historial**: Ve canciones reproducidas en ListeningHistory.
+- **Reseñas**: Califica restaurantes en RestaurantReviews con ratings detallados.
+- **Restaurantes Mejorados**: Muestra logo, descripción y rating en HomePage y RestaurantSelector.
 
-### 4. Iniciar el proyecto
+## Uso
 
-```bash
-# Desarrollo
-npm run dev
+1. **Como Cliente**: Selecciona restaurante → Explora música → Solicita canciones → Gestiona favoritos/playlists.
+2. **Como Usuario Registrado**: Regístrate/login → Accede a historial, playlists y reseñas.
+3. **Como Admin**: Login en panel → Gestiona cola y estadísticas.
 
-# Build para producción
-npm run build
+## Contribuyendo
 
-# Preview del build
-npm run preview
-```
+1. Fork el repositorio
+2. Crea branch `feature/nombre-feature`
+3. Commit cambios
+4. Push y PR
 
-## ⚙️ Configuración
+## Licencia
 
-### Variables de Entorno
-
-Crea un archivo `.env` basado en `.env.example`:
-
-```bash
-cp .env.example .env
-```
-
-### Integración con Spotify (Opcional)
-
-1. **Crear app en Spotify Developers:**
-   - Ve a https://developer.spotify.com/dashboard
-   - Crea una nueva aplicación
-   - Obtén tu `CLIENT_ID` y `CLIENT_SECRET`
-
-2. **Configurar variables:**
-   ```env
-   VITE_SPOTIFY_CLIENT_ID=tu_client_id
-   VITE_SPOTIFY_CLIENT_SECRET=tu_client_secret
-   ```
-
-3. **Habilitar API real:**
-   ```javascript
-   // En useMusicData.js
-   const [useRealAPI, setUseRealAPI] = useState(true);
-   ```
-
-## 📱 Uso de la Aplicación
-
-### Para Clientes del Restaurante:
-
-1. **Explorar Música**: Navega por géneros o busca canciones específicas
-2. **Agregar Favoritos**: Marca tus canciones favoritas con ❤️
-3. **Pedir Canciones**: Envía peticiones que van a la cola del restaurante
-4. **Ver Estado**: Monitorea el progreso de tus peticiones
-
-### Para Administradores:
-
-- Panel de control para gestionar la cola
-- Estadísticas de uso y preferencias
-- Configuración de géneros permitidos
-- Moderación de contenido
-
-## 🎨 Personalización
-
-### Colores y Temas
-
-Modifica `tailwind.config.js` para cambiar la paleta de colores:
-
-```javascript
-theme: {
-  extend: {
-    colors: {
-      primary: {
-        // Tus colores personalizados
-      }
-    }
-  }
-}
-```
-
-### Géneros Musicales
-
-Edita `src/data/mockData.js` para agregar o modificar géneros:
-
-```javascript
-export const genres = [
-  { id: 'rock', name: 'Rock', emoji: '🎸' },
-  { id: 'pop', name: 'Pop', emoji: '✨' },
-  // Agregar más géneros...
-];
-```
-
-## 📊 Modelo de Negocio Sugerido
-
-### Precios para Colombia:
-
-**Sin Spotify:**
-- Básico: $89.900/mes (1-10 mesas)
-- Profesional: $179.900/mes (10-25 mesas)
-- Premium: $299.900/mes (25+ mesas)
-
-**Con Spotify:**
-- Básico: $149.900/mes
-- Pro: $249.900/mes
-- Premium: $399.900/mes
-
-## 🚀 Despliegue en Producción
-
-### Vercel (Recomendado)
-
-```bash
-npm install -g vercel
-vercel --prod
-```
-
-### Netlify
-
-```bash
-npm run build
-# Subir carpeta 'dist' a Netlify
-```
-
-### Docker
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "run", "preview"]
-```
-
-## 🔧 Scripts Disponibles
-
-```bash
-npm run dev          # Servidor de desarrollo
-npm run build        # Build para producción
-npm run preview      # Preview del build
-npm run lint         # Linting con ESLint
-npm run format       # Formatear código con Prettier
-```
-
-## 🧪 Testing
-
-```bash
-# Instalar dependencias de testing
-npm install -D @testing-library/react @testing-library/jest-dom vitest
-
-# Ejecutar tests
-npm run test
-```
-
-## 📈 Roadmap
-
-### Próximas Funcionalidades:
-
-- [ ] **Backend con WebSockets** para sincronización real
-- [ ] **Sistema de autenticación** por mesa/QR
-- [ ] **Panel administrativo** para staff del restaurante
-- [ ] **Analytics avanzados** de preferencias musicales
-- [ ] **Chat entre usuarios** de la misma mesa
-- [ ] **Playlists colaborativas**
-- [ ] **Sistema de votación** para canciones
-- [ ] **Integración con sistemas POS**
-- [ ] **Notificaciones push**
-- [ ] **Modo offline** con cache
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
-
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE.md](LICENSE.md) para detalles.
-
-## 🆘 Soporte
-
-- **Email**: soporte@musicmenu.co
-- **Discord**: [Servidor de la comunidad](#)
-- **Documentación**: [docs.musicmenu.co](#)
-
-## 👥 Equipo
-
-- **Desarrollador Principal**: Tu Nombre
-- **Diseño UI/UX**: [Nombre]
-- **Backend**: [Nombre]
-- **QA**: [Nombre]
-
----
-
-**¿Te gusta el proyecto? ¡Dale una ⭐ en GitHub!**
+MIT

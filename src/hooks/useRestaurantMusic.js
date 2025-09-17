@@ -20,6 +20,9 @@ export const useRestaurantMusic = (restaurantSlug) => {
   const [currentGenre, setCurrentGenre] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // User type from storage
+  const userType = useMemo(() => localStorage.getItem('user_type') || 'guest', []);
+
   // Inicializar cuando cambia el restaurante
   useEffect(() => {
     if (restaurantSlug) {
@@ -27,7 +30,7 @@ export const useRestaurantMusic = (restaurantSlug) => {
     } else {
       resetState();
     }
-  }, [restaurantSlug]);
+  }, [restaurantSlug, userType]);
 
   const resetState = () => {
     setSongs([]);
@@ -53,21 +56,34 @@ export const useRestaurantMusic = (restaurantSlug) => {
       setLoading(true);
       setError(null);
 
-      console.log('Initializing session for:', restaurantSlug);
+      console.log('Initializing session for:', restaurantSlug, 'userType:', userType);
 
       // Verificar si ya hay una sesión activa válida
       let session = apiService.getCurrentSession();
       
+      let registeredUserId = null;
+      if (userType === 'registered') {
+        // Obtener ID del usuario registrado del perfil o storage
+        const profile = await apiService.getUserProfile().catch(() => null);
+        if (profile) {
+          registeredUserId = profile.id;
+          localStorage.setItem('registered_user_id', registeredUserId);
+        } else {
+          registeredUserId = localStorage.getItem('registered_user_id');
+        }
+      }
+
       if (!session || session.user?.restaurantSlug !== restaurantSlug) {
-        console.log('Creating new user session for:', restaurantSlug);
+        console.log('Creating new user session for:', restaurantSlug, 'with registeredUserId:', registeredUserId);
         // Crear nueva sesión de usuario real
-        session = await apiService.createUserSession(restaurantSlug);
+        session = await apiService.createUserSession(restaurantSlug, null, registeredUserId);
         console.log('Session created:', session);
       }
 
       if (session?.user) {
-        setUserSession(session.user);
-        console.log('User session set:', session.user);
+        // Asegurar que userSession tenga type
+        setUserSession({ ...session.user, userType });
+        console.log('User session set:', { ...session.user, userType });
       }
 
       // Cargar datos reales del servidor
@@ -78,6 +94,19 @@ export const useRestaurantMusic = (restaurantSlug) => {
       
       if (session?.user?.tableNumber) {
         loadPromises.push(loadUserRequests(session.user.tableNumber));
+      }
+
+      // Cargar favorites basado en userType
+      if (userType === 'registered' && registeredUserId) {
+        const favResponse = await apiService.getFavorites(registeredUserId, 'registered');
+        if (favResponse?.favorites) {
+          setFavorites(favResponse.favorites);
+        }
+      } else if (session?.user?.id) {
+        const favResponse = await apiService.getFavorites(session.user.id, 'guest');
+        if (favResponse?.favorites) {
+          setFavorites(favResponse.favorites);
+        }
       }
 
       await Promise.all(loadPromises);
@@ -239,11 +268,12 @@ export const useRestaurantMusic = (restaurantSlug) => {
     }
 
     try {
-      console.log('Creating request:', { restaurantSlug, songId: song.id, tableNumber: userSession.tableNumber });
-      
+      console.log('Creating request:', { restaurantSlug, songId: song.id, tableNumber: userSession.tableNumber, userType });
+
+      // La API maneja el user_type internamente basado en token/session
       const response = await apiService.createRequest(
-        restaurantSlug, 
-        song.id, 
+        restaurantSlug,
+        song.id,
         userSession.tableNumber
       );
 
@@ -322,20 +352,37 @@ export const useRestaurantMusic = (restaurantSlug) => {
       return false;
     }
 
-    // NUEVO: Verificar si el usuario está autenticado (no es sesión temporal)
-    if (!userSession?.id || userSession?.type === 'guest' || !userSession?.isAuthenticated) {
-      setError('Para guardar favoritos necesitas crear una cuenta e iniciar sesión');
+    // Verificar tipo de usuario
+    if (userType === 'guest' && !userSession?.id) {
+      setError('Para guardar favoritos como invitado, necesitas una sesión activa');
+      return false;
+    }
+
+    if (userType === 'registered' && !userSession?.registered_user_id && !localStorage.getItem('registered_user_id')) {
+      setError('Para guardar favoritos necesitas iniciar sesión con tu cuenta');
       return false;
     }
 
     try {
-      console.log('Toggle favorite for authenticated user:', {
-        userId: userSession.id,
+      let userIdToUse = null;
+      if (userType === 'registered') {
+        userIdToUse = userSession?.registered_user_id || localStorage.getItem('registered_user_id');
+      } else {
+        userIdToUse = userSession?.id;
+      }
+
+      if (!userIdToUse) {
+        throw new Error('ID de usuario no encontrado');
+      }
+
+      console.log('Toggle favorite:', {
+        userId: userIdToUse,
         songId: song.id,
-        userType: userSession.type
+        userType,
+        restaurantId: restaurant?.id || userSession?.restaurant_id
       });
       
-      const response = await apiService.toggleFavorite(userSession.id, song.id);
+      const response = await apiService.toggleFavorite(userIdToUse, song.id, userType, restaurant?.id || userSession?.restaurant_id);
       
       if (response) {
         // Actualizar favoritos localmente
@@ -354,7 +401,7 @@ export const useRestaurantMusic = (restaurantSlug) => {
       return false;
     } catch (err) {
       console.error('Error toggling favorite:', err);
-      setError('Error al actualizar favoritos');
+      setError('Error al actualizar favoritos: ' + err.message);
       return false;
     }
   };
@@ -362,6 +409,13 @@ export const useRestaurantMusic = (restaurantSlug) => {
   const isFavorite = (songId) => {
     return favorites.some(fav => fav.id === songId);
   };
+
+  // Refrescar data cuando cambia userType
+  useEffect(() => {
+    if (restaurantSlug && userSession) {
+      refreshData();
+    }
+  }, [userType]);
 
   const filterByGenre = async (genre) => {
     if (!restaurantSlug) return;

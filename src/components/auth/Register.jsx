@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, error }) => {
-  const [isAdmin, setIsAdmin] = useState(false); // false = Usuario, true = Administrador
+  const [isRestaurant, setIsRestaurant] = useState(false); // false = Usuario registrado, true = Restaurante
   const [formData, setFormData] = useState({
     // Campos comunes
     name: '',
@@ -30,13 +30,13 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
     confirmPassword: '',
     phone: '',
     
-    // Campos específicos para usuarios normales
+    // Campos específicos para usuarios registrados
     dateOfBirth: '',
     preferredGenres: [],
     acceptTerms: false,
     acceptMarketing: false,
     
-    // Campos específicos para admin/restaurante
+    // Campos específicos para restaurante
     restaurantName: '',
     address: '',
     city: '',
@@ -49,6 +49,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   const musicGenres = [
     { id: 'pop', name: 'Pop', color: 'bg-pink-500' },
@@ -102,7 +103,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateAdminForm = () => {
+  const validateRestaurantForm = () => {
     const newErrors = {};
 
     if (!formData.restaurantName) {
@@ -146,20 +147,51 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const isValid = isAdmin ? validateAdminForm() : validateUserForm();
+    const isValid = isRestaurant ? validateRestaurantForm() : validateUserForm();
     if (!isValid) return;
 
     setErrors({});
 
     try {
-      // Preparar datos según el tipo de usuario
-      const submitData = {
-        ...formData,
-        userType: isAdmin ? 'admin' : 'user',
-        preferredGenres: isAdmin ? [] : formData.preferredGenres
-      };
-      
-      await onRegister(submitData);
+      let response;
+      if (isRestaurant) {
+        const restaurantData = {
+          name: formData.restaurantName,
+          ownerName: formData.ownerName,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          country: formData.country,
+          cuisineType: formData.cuisineType,
+          description: formData.description
+        };
+        response = await apiService.registerRestaurant(restaurantData);
+        localStorage.setItem('user_type', 'restaurant');
+      } else {
+        const userData = {
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          dateOfBirth: formData.dateOfBirth,
+          preferredGenres: formData.preferredGenres,
+          acceptMarketing: formData.acceptMarketing
+        };
+        response = await apiService.registerUser(userData);
+        localStorage.setItem('user_type', 'registered');
+      }
+
+      if (response.success || response.access_token) {
+        if (response.needs_verification) {
+          setNeedsVerification(true);
+          return { needsVerification: true };
+        }
+        await onRegister(response);
+      } else {
+        throw new Error(response.message || 'Error al crear la cuenta');
+      }
     } catch (error) {
       setErrors({ submit: error.message || 'Error al crear la cuenta' });
     }
@@ -185,8 +217,9 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
   };
 
   const handleToggleUserType = () => {
-    setIsAdmin(!isAdmin);
+    setIsRestaurant(!isRestaurant);
     setErrors({});
+    setNeedsVerification(false);
     // Limpiar algunos campos específicos al cambiar
     setFormData(prev => ({
       ...prev,
@@ -215,13 +248,13 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className={`absolute inset-0 bg-gradient-to-r ${
-                isAdmin 
-                  ? 'from-yellow-500 to-amber-600' 
+                isRestaurant
+                  ? 'from-orange-500 to-yellow-600'
                   : 'from-emerald-500 to-teal-600'
               } rounded-full opacity-20 blur-lg animate-pulse`}></div>
               <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-full border border-slate-700/50">
-                {isAdmin ? (
-                  <Crown className="h-12 w-12 text-yellow-400" />
+                {isRestaurant ? (
+                  <Building2 className="h-12 w-12 text-orange-400" />
                 ) : (
                   <UserPlus className="h-12 w-12 text-emerald-400" />
                 )}
@@ -230,14 +263,14 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
           </div>
           
           <h1 className={`text-3xl font-black bg-gradient-to-r ${
-            isAdmin 
-              ? 'from-yellow-400 to-amber-400' 
+            isRestaurant
+              ? 'from-orange-400 to-yellow-400'
               : 'from-emerald-400 to-teal-400'
           } bg-clip-text text-transparent mb-2`}>
-            {isAdmin ? 'Registra tu Restaurante' : 'Crear Cuenta'}
+            {isRestaurant ? 'Registra tu Restaurante' : 'Crear Cuenta'}
           </h1>
           <p className="text-slate-300">
-            {isAdmin 
+            {isRestaurant
               ? 'Únete como establecimiento y gestiona la experiencia musical'
               : 'Únete y personaliza tu experiencia musical'
             }
@@ -249,10 +282,10 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-1">
             <div className="flex relative">
               {/* Toggle Background */}
-              <div 
+              <div
                 className={`absolute inset-y-1 w-1/2 bg-gradient-to-r ${
-                  isAdmin 
-                    ? 'from-yellow-500/20 to-amber-500/20 translate-x-full border-yellow-500/30' 
+                  isRestaurant
+                    ? 'from-orange-500/20 to-yellow-500/20 translate-x-full border-orange-500/30'
                     : 'from-emerald-500/20 to-teal-500/20 translate-x-0 border-emerald-500/30'
                 } border rounded-xl transition-all duration-300 ease-in-out`}
               />
@@ -260,10 +293,10 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
               {/* Usuario Option */}
               <button
                 type="button"
-                onClick={() => !isAdmin || handleToggleUserType()}
+                onClick={() => !isRestaurant || handleToggleUserType()}
                 className={`relative z-10 flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
-                  !isAdmin 
-                    ? 'text-emerald-300' 
+                  !isRestaurant
+                    ? 'text-emerald-300'
                     : 'text-slate-400 hover:text-slate-300'
                 }`}
               >
@@ -271,17 +304,17 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                 <span>Usuario</span>
               </button>
               
-              {/* Administrador Option */}
+              {/* Restaurante Option */}
               <button
                 type="button"
-                onClick={() => isAdmin || handleToggleUserType()}
+                onClick={() => isRestaurant || handleToggleUserType()}
                 className={`relative z-10 flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
-                  isAdmin 
-                    ? 'text-yellow-300' 
+                  isRestaurant
+                    ? 'text-orange-300'
                     : 'text-slate-400 hover:text-slate-300'
                 }`}
               >
-                <Crown className="h-5 w-5" />
+                <Building2 className="h-5 w-5" />
                 <span>Restaurante</span>
               </button>
             </div>
@@ -381,11 +414,11 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   className={`w-full pl-12 pr-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                    isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-emerald-500'
+                    isRestaurant ? 'focus:ring-orange-500' : 'focus:ring-emerald-500'
                   } transition-all duration-200 ${
                     errors.email ? 'border-red-500' : 'border-slate-600'
                   }`}
-                  placeholder={isAdmin ? 'admin@turestaurante.com' : 'tu@email.com'}
+                  placeholder={isRestaurant ? 'admin@turestaurante.com' : 'tu@email.com'}
                   autoComplete="email"
                   disabled={isLoading}
                 />
@@ -411,7 +444,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     className={`w-full pl-12 pr-12 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                      isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-emerald-500'
+                      isRestaurant ? 'focus:ring-orange-500' : 'focus:ring-emerald-500'
                     } transition-all duration-200 ${
                       errors.password ? 'border-red-500' : 'border-slate-600'
                     }`}
@@ -449,7 +482,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     className={`w-full pl-12 pr-12 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                      isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-emerald-500'
+                      isRestaurant ? 'focus:ring-orange-500' : 'focus:ring-emerald-500'
                     } transition-all duration-200 ${
                       errors.confirmPassword ? 'border-red-500' : 'border-slate-600'
                     }`}
@@ -486,7 +519,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className={`w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
-                    isAdmin ? 'focus:ring-yellow-500' : 'focus:ring-emerald-500'
+                    isRestaurant ? 'focus:ring-orange-500' : 'focus:ring-emerald-500'
                   } transition-all duration-200`}
                   placeholder="+57 300 123 4567"
                   disabled={isLoading}
@@ -505,7 +538,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     type="text"
                     value={formData.address}
                     onChange={(e) => handleInputChange('address', e.target.value)}
-                    className={`w-full px-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 ${
+                    className={`w-full px-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 ${
                       errors.address ? 'border-red-500' : 'border-slate-600'
                     }`}
                     placeholder="Dirección completa del restaurante"
@@ -528,7 +561,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                       type="text"
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200"
                       placeholder="Bogotá"
                       disabled={isLoading}
                     />
@@ -541,7 +574,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     <select
                       value={formData.cuisineType}
                       onChange={(e) => handleInputChange('cuisineType', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200"
+                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200"
                       disabled={isLoading}
                     >
                       <option value="">Seleccionar tipo</option>
@@ -560,7 +593,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 transition-all duration-200 resize-none"
+                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 resize-none"
                     placeholder="Cuéntanos sobre tu restaurante, ambiente y especialidades..."
                     disabled={isLoading}
                   />
@@ -627,7 +660,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   checked={formData.acceptTerms}
                   onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
                   className={`mt-1 h-4 w-4 ${
-                    isAdmin ? 'text-yellow-500 focus:ring-yellow-500' : 'text-emerald-500 focus:ring-emerald-500'
+                    isRestaurant ? 'text-orange-500 focus:ring-orange-500' : 'text-emerald-500 focus:ring-emerald-500'
                   } border-slate-600 rounded bg-slate-800 ${
                     errors.acceptTerms ? 'ring-1 ring-red-500' : ''
                   }`}
@@ -663,7 +696,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   checked={formData.acceptMarketing}
                   onChange={(e) => handleInputChange('acceptMarketing', e.target.checked)}
                   className={`mt-1 h-4 w-4 ${
-                    isAdmin ? 'text-yellow-500 focus:ring-yellow-500' : 'text-emerald-500 focus:ring-emerald-500'
+                    isRestaurant ? 'text-orange-500 focus:ring-orange-500' : 'text-emerald-500 focus:ring-emerald-500'
                   } border-slate-600 rounded bg-slate-800`}
                   disabled={isLoading}
                 />
@@ -674,7 +707,23 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             </div>
 
             {/* Submit Error */}
-            {(errors.submit || error) && (
+            {needsVerification && (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
+                <p className="text-yellow-400 text-sm flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Verifica tu email para completar el registro. Te enviamos un enlace.</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="mt-2 w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  Reenviar email de verificación
+                </button>
+              </div>
+            )}
+
+            {(errors.submit || error) && !needsVerification && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
                 <p className="text-red-400 text-sm flex items-center space-x-2">
                   <AlertCircle className="h-4 w-4" />
@@ -686,10 +735,10 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || needsVerification}
               className={`w-full flex items-center justify-center space-x-2 py-4 bg-gradient-to-r ${
-                isAdmin 
-                  ? 'from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 shadow-yellow-500/25' 
+                isRestaurant
+                  ? 'from-orange-500 to-yellow-600 hover:from-orange-600 hover:to-yellow-700 shadow-orange-500/25'
                   : 'from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/25'
               } text-white rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
             >
@@ -700,8 +749,8 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                 </>
               ) : (
                 <>
-                  {isAdmin ? <Crown className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-                  <span>{isAdmin ? 'Registrar Restaurante' : 'Crear Cuenta'}</span>
+                  {isRestaurant ? <Building2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+                  <span>{isRestaurant ? 'Registrar Restaurante' : 'Crear Cuenta'}</span>
                   <ArrowRight className="h-5 w-5" />
                 </>
               )}
@@ -709,24 +758,24 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
 
             {/* Features Info */}
             <div className={`mt-6 p-4 ${
-              isAdmin 
-                ? 'bg-yellow-500/10 border-yellow-500/30' 
+              isRestaurant
+                ? 'bg-orange-500/10 border-orange-500/30'
                 : 'bg-emerald-500/10 border-emerald-500/30'
             } border rounded-xl`}>
               <div className="flex items-start space-x-3">
-                {isAdmin ? (
-                  <Building2 className="h-5 w-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                {isRestaurant ? (
+                  <Building2 className="h-5 w-5 text-orange-400 mt-0.5 flex-shrink-0" />
                 ) : (
                   <Heart className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
                 )}
                 <div>
                   <h4 className={`font-semibold ${
-                    isAdmin ? 'text-yellow-400' : 'text-emerald-400'
+                    isRestaurant ? 'text-orange-400' : 'text-emerald-400'
                   } mb-2`}>
-                    {isAdmin ? 'Tu restaurante tendrá' : 'Con tu cuenta puedes'}
+                    {isRestaurant ? 'Tu restaurante tendrá' : 'Con tu cuenta puedes'}
                   </h4>
                   <ul className="text-sm text-slate-300 space-y-1">
-                    {isAdmin ? (
+                    {isRestaurant ? (
                       <>
                         <li>• Gestión completa de cola musical</li>
                         <li>• Control de reproducción en tiempo real</li>
@@ -798,8 +847,8 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                 className="inline-flex items-center space-x-2 px-6 py-3 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-xl font-medium hover:bg-slate-800 hover:text-white transition-all duration-300"
                 disabled={isLoading}
               >
-                {isAdmin ? <Headphones className="h-5 w-5" /> : <Music className="h-5 w-5" />}
-                <span>{isAdmin ? 'Acceso como Cliente' : 'Continuar como Invitado'}</span>
+                {isRestaurant ? <Headphones className="h-5 w-5" /> : <Music className="h-5 w-5" />}
+                <span>{isRestaurant ? 'Acceso como Usuario' : 'Continuar como Invitado'}</span>
               </button>
             </>
           )}

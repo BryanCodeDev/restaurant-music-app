@@ -59,15 +59,16 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
         // Keep all original API data
         // Add fallback values for enhanced UI features if not provided by API
         coverImage: restaurant.coverImage || restaurant.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=400&fit=crop&crop=center',
-        reviewCount: restaurant.reviewCount || 0,
+        reviewCount: restaurant.totalReviews || 0,
         activeCustomers: restaurant.activeCustomers || 0,
         totalSongs: restaurant.totalSongs || 0,
         genres: restaurant.genres || ['Música Variada'],
         specialFeatures: restaurant.specialFeatures || [],
-        priceRange: restaurant.priceRange || '$',
+        priceRange: restaurant.priceRange || '$$',
         musicStyle: restaurant.musicStyle || 'Variado',
-        hours: restaurant.hours || (restaurant.isActive ? 'Abierto ahora' : 'Cerrado'),
-        currentArtist: restaurant.currentArtist || (restaurant.currentSong ? restaurant.currentSong.split(' - ')[1] : null)
+        hours: restaurant.business_hours ? JSON.parse(restaurant.business_hours).open || 'Abierto ahora' : (restaurant.isActive ? 'Abierto ahora' : 'Cerrado'),
+        currentArtist: restaurant.currentArtist || (restaurant.currentSong ? restaurant.currentSong.split(' - ')[1] : null),
+        description: restaurant.description || ''
       }));
       
       setRestaurants(enhancedRestaurants);
@@ -415,10 +416,17 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-black text-xl text-white group-hover:text-blue-300 transition-colors line-clamp-2">
-                        {restaurant.name}
-                      </h3>
-                      <p className="text-slate-400 text-sm mt-1">{restaurant.type || 'Restaurante'}</p>
+                      <div className="space-y-1">
+                        <h3 className="font-black text-xl text-white group-hover:text-blue-300 transition-colors line-clamp-1">
+                          {restaurant.name}
+                        </h3>
+                        {restaurant.description && (
+                          <p className="text-slate-400 text-xs line-clamp-2">
+                            {restaurant.description}
+                          </p>
+                        )}
+                        <p className="text-slate-500 text-xs">{restaurant.cuisine_type || 'Restaurante'}</p>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end space-y-1">
                       <div className="flex items-center space-x-1 text-yellow-400">

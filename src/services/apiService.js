@@ -70,36 +70,119 @@ class ApiService {
 
   // ===== AUTHENTICATION =====
   
+  // Restaurant Auth
   async registerRestaurant(data) {
-    const response = await this.request('/auth/register', {
+    const response = await this.request('/auth/register-restaurant', {
       method: 'POST',
       body: data
     });
     
-    if (response.success && response.data?.token) {
-      localStorage.setItem('auth_token', response.data.token);
+    if (response.success && response.data?.access_token) {
+      localStorage.setItem('auth_token', response.data.access_token);
+      if (response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
       return response.data;
-    } else if (response.token) {
-      localStorage.setItem('auth_token', response.token);
+    } else if (response.access_token) {
+      localStorage.setItem('auth_token', response.access_token);
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
     }
     
     return response;
   }
 
   async loginRestaurant(email, password) {
-    const response = await this.request('/auth/login', {
+    const response = await this.request('/auth/login-restaurant', {
       method: 'POST',
       body: { email, password }
     });
     
-    if (response.success && response.data?.token) {
-      localStorage.setItem('auth_token', response.data.token);
+    if (response.success && response.data?.access_token) {
+      localStorage.setItem('auth_token', response.data.access_token);
+      if (response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
       return response.data;
-    } else if (response.token) {
-      localStorage.setItem('auth_token', response.token);
+    } else if (response.access_token) {
+      localStorage.setItem('auth_token', response.access_token);
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
     }
     
     return response;
+  }
+
+  // User Auth (Registered Users)
+  async registerUser(data) {
+    const response = await this.request('/auth/register-user', {
+      method: 'POST',
+      body: data
+    });
+    
+    if (response.success && response.data?.access_token) {
+      localStorage.setItem('auth_token', response.data.access_token);
+      localStorage.setItem('user_type', 'registered');
+      if (response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
+      return response.data;
+    } else if (response.access_token) {
+      localStorage.setItem('auth_token', response.access_token);
+      localStorage.setItem('user_type', 'registered');
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
+    }
+    
+    return response;
+  }
+
+  async loginUser(email, password) {
+    const response = await this.request('/auth/login-user', {
+      method: 'POST',
+      body: { email, password }
+    });
+    
+    if (response.success && response.data?.access_token) {
+      localStorage.setItem('auth_token', response.data.access_token);
+      localStorage.setItem('user_type', 'registered');
+      if (response.data.refresh_token) {
+        localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
+      return response.data;
+    } else if (response.access_token) {
+      localStorage.setItem('auth_token', response.access_token);
+      localStorage.setItem('user_type', 'registered');
+      if (response.refresh_token) {
+        localStorage.setItem('refresh_token', response.refresh_token);
+      }
+    }
+    
+    return response;
+  }
+
+  async getUserProfile() {
+    const userType = localStorage.getItem('user_type');
+    if (!userType || userType !== 'registered') {
+      throw new Error('User profile only available for registered users');
+    }
+    const response = await this.request('/auth/profile-user');
+    return response.success ? response.data : response;
+  }
+
+  async updateUserProfile(data) {
+    const userType = localStorage.getItem('user_type');
+    if (!userType || userType !== 'registered') {
+      throw new Error('User profile update only for registered users');
+    }
+    const response = await this.request('/auth/profile-user', {
+      method: 'PUT',
+      body: data
+    });
+    return response.success ? response.data : response;
   }
 
   async createUserSession(restaurantSlug, tableNumber = null) {
@@ -123,11 +206,21 @@ class ApiService {
   }
 
   async getProfile() {
+    const userType = localStorage.getItem('user_type');
+    if (userType === 'registered') {
+      return await this.getUserProfile();
+    }
+    // Default to restaurant or session profile
     const response = await this.request('/auth/profile');
     return response.success ? response.data : response;
   }
 
   async updateProfile(data) {
+    const userType = localStorage.getItem('user_type');
+    if (userType === 'registered') {
+      return await this.updateUserProfile(data);
+    }
+    // Default to restaurant or session profile
     const response = await this.request('/auth/profile', {
       method: 'PUT',
       body: data
@@ -284,15 +377,96 @@ class ApiService {
 
   // ===== FAVORITES =====
   
-  async getFavorites(userId) {
-    const response = await this.request(`/favorites/user/${userId}`);
+  async getFavorites(userId, userType = 'guest') {
+    const params = new URLSearchParams({ userType });
+    const response = await this.request(`/favorites/user/${userId}?${params}`);
     return response.success ? response.data : response;
   }
 
-  async toggleFavorite(userId, songId) {
-    const response = await this.request('/favorites', {
+  async toggleFavorite(userId, songId, userType = 'guest', restaurantId) {
+    const body = {
+      userId,
+      songId,
+      userType,
+      restaurantId
+    };
+    const response = await this.request('/favorites/toggle', {
       method: 'POST',
-      body: { userId, songId }
+      body
+    });
+    return response.success ? response.data : response;
+  }
+
+  // ===== PLAYLISTS =====
+  
+  async createPlaylist(userId, name, description = '', isPublic = false) {
+    const body = { name, description, isPublic };
+    const response = await this.request(`/playlists/user/${userId}`, {
+      method: 'POST',
+      body
+    });
+    return response.success ? response.data : response;
+  }
+
+  async getUserPlaylists(userId, limit = 10, offset = 0) {
+    const params = new URLSearchParams({ limit, offset });
+    const response = await this.request(`/playlists/user/${userId}?${params}`);
+    return response.success ? response.data : response;
+  }
+
+  async addSongToPlaylist(playlistId, songId, position = null) {
+    const body = { songId, position };
+    const response = await this.request(`/playlists/${playlistId}/songs`, {
+      method: 'POST',
+      body
+    });
+    return response.success ? response.data : response;
+  }
+
+  async getPlaylistSongs(playlistId) {
+    const response = await this.request(`/playlists/${playlistId}/songs`);
+    return response.success ? response.data : response;
+  }
+
+  // ===== LISTENING HISTORY =====
+  
+  async getListeningHistory(userId, limit = 50, fromDate = null) {
+    const params = new URLSearchParams({ limit });
+    if (fromDate) {
+      params.append('fromDate', fromDate);
+    }
+    const response = await this.request(`/history/user/${userId}?${params}`);
+    return response.success ? response.data : response;
+  }
+
+  // ===== RESTAURANT REVIEWS =====
+  
+  async createReview(restaurantId, rating, title = '', comment = '', musicRating = null, serviceRating = null, ambianceRating = null) {
+    const body = {
+      rating,
+      title,
+      comment,
+      musicRating,
+      serviceRating,
+      ambianceRating
+    };
+    const response = await this.request(`/reviews/restaurants/${restaurantId}`, {
+      method: 'POST',
+      body
+    });
+    return response.success ? response.data : response;
+  }
+
+  async getRestaurantReviews(restaurantId, limit = 10, offset = 0) {
+    const params = new URLSearchParams({ limit, offset });
+    const response = await this.request(`/reviews/restaurants/${restaurantId}?${params}`);
+    return response.success ? response.data : response;
+  }
+
+  async updateReview(reviewId, data) {
+    const response = await this.request(`/reviews/${reviewId}`, {
+      method: 'PUT',
+      body: data
     });
     return response.success ? response.data : response;
   }
@@ -311,9 +485,37 @@ class ApiService {
 
   clearSession() {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('current_session');
+    localStorage.removeItem('user_type');
     localStorage.removeItem('admin_token'); // Legacy
     localStorage.removeItem('user_token');  // Legacy
+  }
+
+  async refreshAuthToken() {
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      const response = await this.request('/auth/refresh', {
+        method: 'POST',
+        body: { refresh_token: refreshToken }
+      });
+
+      if (response.success && response.data?.access_token) {
+        localStorage.setItem('auth_token', response.data.access_token);
+        if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token);
+        }
+        return response.data.access_token;
+      }
+      return null;
+    } catch (error) {
+      this.clearSession();
+      throw error;
+    }
   }
 
   isAuthenticated() {

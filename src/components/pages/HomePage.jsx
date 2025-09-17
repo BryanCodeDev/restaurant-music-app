@@ -79,9 +79,30 @@ const HomePage = ({ onViewChange, restaurant, userSession, stats = {} }) => {
         </div>
         
         <div className="space-y-2 mb-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white">
-            {restaurant?.name || 'Restaurante'}
-          </h2>
+          <div className="space-y-2 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white">
+              {restaurant?.name || 'Restaurante'}
+            </h2>
+            {restaurant?.logo && (
+              <img
+                src={restaurant.logo}
+                alt={`${restaurant.name} logo`}
+                className="w-16 h-16 rounded-full mx-auto border-2 border-white/20"
+              />
+            )}
+            {restaurant?.description && (
+              <p className="text-sm text-slate-400 italic max-w-md mx-auto">
+                {restaurant.description}
+              </p>
+            )}
+            {restaurant?.rating > 0 && (
+              <div className="flex items-center justify-center space-x-1 text-yellow-400">
+                <Star className="h-5 w-5 fill-current" />
+                <span className="text-lg font-bold">{restaurant.rating}</span>
+                <span className="text-sm text-slate-400">({restaurant.totalReviews || 0})</span>
+              </div>
+            )}
+          </div>
           <p className="text-lg text-slate-300">
             {userSession?.tableNumber && `${userSession.tableNumber} • `}
             Tu música, tu ambiente
