@@ -278,6 +278,21 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
+  async getPublicRestaurants(params = {}) {
+  const cleanParams = Object.entries(params).reduce((acc, [key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      acc[key] = value;
+    }
+    return acc;
+  }, {});
+  
+  const queryString = new URLSearchParams(cleanParams).toString();
+  const endpoint = `/restaurants${queryString ? `?${queryString}` : ''}`;
+  
+  const response = await this.request(endpoint);
+  return response.success ? response.data : response;
+}
+
   // ===== UTILITY METHODS - CORREGIDO =====
   
   getCurrentSession() {

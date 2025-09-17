@@ -1,515 +1,790 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  BarChart3, 
-  Users, 
-  Music, 
-  Clock, 
-  TrendingUp, 
-  Play, 
-  Pause,
-  SkipForward,
-  SkipBack,
-  Volume2,
-  VolumeX,
-  Settings,
-  Bell,
-  Calendar,
-  Download,
-  RefreshCw,
-  Eye,
-  Heart,
-  Star,
-  Activity,
-  LogOut,
+  Building2, 
+  Mail, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  ArrowRight,
+  AlertCircle,
+  Headphones,
   Crown,
-  Headphones
+  Phone,
+  MapPin,
+  User,
+  Upload,
+  CheckCircle,
+  ArrowLeft,
+  Zap,
+  Star,
+  Shield,
+  Calendar,
+  CreditCard,
+  Check,
+  X
 } from 'lucide-react';
 
-const AdminDashboard = ({ 
-  restaurant, 
-  requests = [], 
-  currentSong = null,
-  onLogout,
-  onPlayPause,
-  onNext,
-  onPrevious,
-  onVolumeChange,
-  isPlaying = false,
-  volume = 75
-}) => {
-  const [isMuted, setIsMuted] = useState(false);
-  const [stats, setStats] = useState({
-    totalRequests: 0,
-    activeUsers: 0,
-    songsPlayed: 0,
-    avgWaitTime: 0
+const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack, isLoading = false, error = null }) => {
+  const [currentStep, setCurrentStep] = useState(1); // 1: Datos básicos, 2: Plan, 3: Verificación
+  const [formData, setFormData] = useState({
+    // Datos del restaurante
+    restaurantName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: '',
+    address: '',
+    city: '',
+    country: 'Colombia',
+    
+    // Datos del contacto
+    ownerName: '',
+    ownerTitle: 'Propietario',
+    
+    // Plan de suscripción
+    selectedPlan: 'starter',
+    
+    // Verificación
+    businessDocument: null,
+    acceptTerms: false,
+    acceptMarketing: false
   });
+  const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Calculate stats from requests
-  useEffect(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayRequests = requests.filter(req => {
-      const requestDate = new Date(req.createdAt || req.requestedAt);
-      return requestDate >= today;
-    });
-    
-    const activeUsers = new Set(
-      requests.filter(req => req.status === 'pending' || req.status === 'playing')
-        .map(req => req.userTable)
-    ).size;
-    
-    const completedToday = todayRequests.filter(req => req.status === 'completed').length;
-    const pendingRequests = requests.filter(req => req.status === 'pending');
-    const avgWaitTime = pendingRequests.length > 0 ? pendingRequests.length * 3.5 : 0;
+  const plans = [
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: '$29',
+      period: '/mes',
+      description: 'Perfecto para comenzar',
+      features: [
+        'Hasta 50 mesas',
+        'Cola musical básica',
+        '1,000 peticiones/mes',
+        'Soporte por email',
+        'Estadísticas básicas'
+      ],
+      limitations: [
+        'Sin personalización avanzada',
+        'Sin API access'
+      ],
+      color: 'blue',
+      popular: false
+    },
+    {
+      id: 'professional',
+      name: 'Professional',
+      price: '$79',
+      period: '/mes',
+      description: 'Ideal para restaurantes establecidos',
+      features: [
+        'Mesas ilimitadas',
+        'Cola musical avanzada',
+        '10,000 peticiones/mes',
+        'Soporte prioritario 24/7',
+        'Analytics completos',
+        'Personalización completa',
+        'Integración con Spotify',
+        'Control de contenido'
+      ],
+      limitations: [],
+      color: 'amber',
+      popular: true
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: '$199',
+      period: '/mes',
+      description: 'Para cadenas y grandes establecimientos',
+      features: [
+        'Todo lo de Professional',
+        'Múltiples ubicaciones',
+        'Peticiones ilimitadas',
+        'Soporte dedicado',
+        'API completa',
+        'White-label',
+        'Integración personalizada',
+        'SLA garantizado'
+      ],
+      limitations: [],
+      color: 'purple',
+      popular: false
+    }
+  ];
 
-    setStats({
-      totalRequests: todayRequests.length,
-      activeUsers,
-      songsPlayed: completedToday,
-      avgWaitTime: Math.round(avgWaitTime)
-    });
-  }, [requests]);
+  const validateStep1 = () => {
+    const newErrors = {};
 
-  const recentRequests = requests
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || b.requestedAt) - new Date(a.createdAt || a.requestedAt))
-    .slice(0, 5);
+    if (!formData.restaurantName) {
+      newErrors.restaurantName = 'El nombre del restaurante es requerido';
+    }
 
-  const popularSongs = requests
-    .reduce((acc, req) => {
-      const key = `${req.title}-${req.artist}`;
-      if (!acc[key]) {
-        acc[key] = { title: req.title, artist: req.artist, requests: 0 };
-      }
-      acc[key].requests++;
-      return acc;
-    }, {});
+    if (!formData.email) {
+      newErrors.email = 'El email es requerido';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email inválido';
+    }
 
-  const popularSongsList = Object.values(popularSongs)
-    .sort((a, b) => b.requests - a.requests)
-    .slice(0, 4);
+    if (!formData.password) {
+      newErrors.password = 'La contraseña es requerida';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'La contraseña debe tener al menos 8 caracteres';
+    }
 
-  const handlePlayPause = () => {
-    onPlayPause();
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Confirma tu contraseña';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+
+    if (!formData.ownerName) {
+      newErrors.ownerName = 'El nombre del contacto es requerido';
+    }
+
+    if (!formData.address) {
+      newErrors.address = 'La dirección es requerida';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleVolumeChange = (newVolume) => {
-    onVolumeChange(newVolume);
-    if (newVolume > 0) {
-      setIsMuted(false);
+  const validateStep3 = () => {
+    const newErrors = {};
+
+    if (!formData.acceptTerms) {
+      newErrors.acceptTerms = 'Debes aceptar los términos de servicio';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1 && validateStep1()) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    } else if (currentStep === 3 && validateStep3()) {
+      handleSubmit();
     }
   };
 
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (!isMuted) {
-      onVolumeChange(0);
-    } else {
-      onVolumeChange(volume);
+  const handleSubmit = async () => {
+    try {
+      await onRegister(formData);
+    } catch (error) {
+      setErrors({ submit: error.message || 'Error al registrar restaurante' });
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'playing': return 'bg-emerald-500/20 text-emerald-400';
-      case 'pending': return 'bg-yellow-500/20 text-yellow-400';
-      case 'completed': return 'bg-blue-500/20 text-blue-400';
-      default: return 'bg-slate-500/20 text-slate-400';
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
     }
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'playing': return 'Reproduciendo';
-      case 'pending': return 'En cola';
-      case 'completed': return 'Completada';
-      default: return 'Desconocido';
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, businessDocument: file }));
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  const renderStep1 = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+          <Building2 className="h-5 w-5 text-amber-400" />
+          <span>Información del Restaurante</span>
+        </h3>
         
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              {/* Logo */}
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl opacity-20 blur"></div>
-                  <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 p-2 rounded-xl">
-                    <Crown className="h-8 w-8 text-white" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                    Panel de Control
-                  </h1>
-                  <p className="text-slate-300 mt-1">
-                    Administra la música de {restaurant?.name || 'tu restaurante'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200">
-                <Calendar className="h-4 w-4" />
-                <span>Hoy</span>
-              </button>
-              <button className="flex items-center space-x-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200">
-                <Download className="h-4 w-4" />
-                <span>Exportar</span>
-              </button>
-              <button 
-                onClick={onLogout}
-                className="flex items-center space-x-2 px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/30 transition-all duration-200"
+        <div className="space-y-4">
+          {/* Restaurant Name */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Nombre del restaurante *
+            </label>
+            <input
+              type="text"
+              value={formData.restaurantName}
+              onChange={(e) => handleInputChange('restaurantName', e.target.value)}
+              className={`w-full px-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ${
+                errors.restaurantName ? 'border-red-500' : 'border-slate-600'
+              }`}
+              placeholder="Ej: Restaurante La Terraza"
+            />
+            {errors.restaurantName && (
+              <p className="mt-1 text-sm text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.restaurantName}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Email corporativo *
+            </label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              className={`w-full px-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ${
+                errors.email ? 'border-red-500' : 'border-slate-600'
+              }`}
+              placeholder="admin@turestaurante.com"
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.email}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Contraseña *
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className={`w-full px-4 pr-12 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ${
+                  errors.password ? 'border-red-500' : 'border-slate-600'
+                }`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
               >
-                <LogOut className="h-4 w-4" />
-                <span>Cerrar Sesión</span>
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.password}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Confirmar contraseña *
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                className={`w-full px-4 pr-12 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ${
+                  errors.confirmPassword ? 'border-red-500' : 'border-slate-600'
+                }`}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            {errors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.confirmPassword}</span>
+              </p>
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-medium">Peticiones Hoy</p>
-                <p className="text-3xl font-bold text-white">{stats.totalRequests}</p>
-                <p className="text-emerald-400 text-sm flex items-center space-x-1 mt-1">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>+{Math.round(Math.random() * 20)}%</span>
-                </p>
-              </div>
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <Music className="h-6 w-6 text-blue-400" />
-              </div>
-            </div>
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+          <User className="h-5 w-5 text-blue-400" />
+          <span>Datos de Contacto</span>
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Nombre del contacto *
+            </label>
+            <input
+              type="text"
+              value={formData.ownerName}
+              onChange={(e) => handleInputChange('ownerName', e.target.value)}
+              className={`w-full px-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ${
+                errors.ownerName ? 'border-red-500' : 'border-slate-600'
+              }`}
+              placeholder="Tu nombre completo"
+            />
+            {errors.ownerName && (
+              <p className="mt-1 text-sm text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.ownerName}</span>
+              </p>
+            )}
           </div>
 
-          <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-medium">Usuarios Activos</p>
-                <p className="text-3xl font-bold text-white">{stats.activeUsers}</p>
-                <p className="text-emerald-400 text-sm flex items-center space-x-1 mt-1">
-                  <Activity className="h-3 w-3" />
-                  <span>En línea</span>
-                </p>
-              </div>
-              <div className="p-3 bg-emerald-500/20 rounded-xl">
-                <Users className="h-6 w-6 text-emerald-400" />
-              </div>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Teléfono
+            </label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200"
+              placeholder="+57 300 123 4567"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+          <MapPin className="h-5 w-5 text-emerald-400" />
+          <span>Ubicación</span>
+        </h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Dirección *
+            </label>
+            <input
+              type="text"
+              value={formData.address}
+              onChange={(e) => handleInputChange('address', e.target.value)}
+              className={`w-full px-4 py-3 bg-slate-800/50 border rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200 ${
+                errors.address ? 'border-red-500' : 'border-slate-600'
+              }`}
+              placeholder="Dirección completa del restaurante"
+            />
+            {errors.address && (
+              <p className="mt-1 text-sm text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errors.address}</span>
+              </p>
+            )}
           </div>
 
-          <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-medium">Canciones Reproducidas</p>
-                <p className="text-3xl font-bold text-white">{stats.songsPlayed}</p>
-                <p className="text-blue-400 text-sm flex items-center space-x-1 mt-1">
-                  <Play className="h-3 w-3" />
-                  <span>Hoy</span>
-                </p>
-              </div>
-              <div className="p-3 bg-purple-500/20 rounded-xl">
-                <Play className="h-6 w-6 text-purple-400" />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Ciudad
+              </label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => handleInputChange('city', e.target.value)}
+                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200"
+                placeholder="Bogotá"
+              />
             </div>
-          </div>
 
-          <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-2xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-slate-400 text-sm font-medium">Tiempo Promedio</p>
-                <p className="text-3xl font-bold text-white">{stats.avgWaitTime}m</p>
-                <p className="text-yellow-400 text-sm flex items-center space-x-1 mt-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Espera</span>
-                </p>
-              </div>
-              <div className="p-3 bg-yellow-500/20 rounded-xl">
-                <Clock className="h-6 w-6 text-yellow-400" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                País
+              </label>
+              <input
+                type="text"
+                value={formData.country}
+                onChange={(e) => handleInputChange('country', e.target.value)}
+                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all duration-200"
+                placeholder="Colombia"
+              />
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Left Column */}
-          <div className="lg:col-span-2 space-y-8">
-            
-            {/* Current Playing */}
-            <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 lg:p-8">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center space-x-2">
-                <Headphones className="h-5 w-5 text-blue-400" />
-                <span>Reproduciendo Ahora</span>
-              </h2>
-              
-              {currentSong ? (
-                <div className="flex items-center space-x-6">
-                  <img 
-                    src={currentSong.image || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop"}
-                    alt={currentSong.title}
-                    className="w-20 h-20 rounded-2xl object-cover"
-                  />
-                  
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-white">{currentSong.title}</h3>
-                    <p className="text-slate-400">{currentSong.artist}</p>
-                    {currentSong.userTable && (
-                      <p className="text-sm text-blue-400 mt-1">Solicitado por: {currentSong.userTable}</p>
-                    )}
-                    
-                    {/* Progress Bar Placeholder */}
-                    <div className="mt-4 space-y-2">
-                      <div className="flex justify-between text-sm text-slate-400">
-                        <span>2:30</span>
-                        <span>{currentSong.duration || '3:45'}</span>
-                      </div>
-                      <div className="w-full bg-slate-700 rounded-full h-2">
-                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full" style={{width: '42%'}}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-600 to-slate-700 rounded-full opacity-20 blur-xl"></div>
-                    <div className="relative bg-slate-700/50 p-6 rounded-full w-20 h-20 flex items-center justify-center mx-auto">
-                      <Music className="h-10 w-10 text-slate-500" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-400 mb-2">No hay música reproduciéndose</h3>
-                  <p className="text-slate-500">Selecciona una canción de la cola para comenzar</p>
+  const renderStep2 = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-xl font-bold text-white mb-2">Elige tu Plan</h3>
+        <p className="text-slate-400">Selecciona el plan que mejor se adapte a tu restaurante</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {plans.map((plan) => (
+          <div
+            key={plan.id}
+            onClick={() => handleInputChange('selectedPlan', plan.id)}
+            className={`relative cursor-pointer transition-all duration-300 transform hover:scale-105 ${
+              formData.selectedPlan === plan.id ? 'scale-105' : ''
+            }`}
+          >
+            <div className={`p-6 rounded-2xl border-2 transition-all duration-300 ${
+              formData.selectedPlan === plan.id
+                ? `border-${plan.color}-500 bg-${plan.color}-500/10 shadow-lg shadow-${plan.color}-500/20`
+                : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+            }`}>
+              {plan.popular && (
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                    MÁS POPULAR
+                  </span>
                 </div>
               )}
-              
-              {/* Controls */}
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-700/50">
-                <div className="flex items-center space-x-4">
-                  <button 
-                    onClick={onPrevious}
-                    className="p-3 bg-slate-700/50 hover:bg-slate-700 rounded-full transition-colors"
-                    disabled={!currentSong}
-                  >
-                    <SkipBack className="h-5 w-5 text-slate-400" />
-                  </button>
-                  
-                  <button 
-                    onClick={handlePlayPause}
-                    className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                    disabled={!currentSong}
-                  >
-                    {isPlaying ? (
-                      <Pause className="h-6 w-6 text-white" />
-                    ) : (
-                      <Play className="h-6 w-6 text-white ml-1" />
-                    )}
-                  </button>
-                  
-                  <button 
-                    onClick={onNext}
-                    className="p-3 bg-slate-700/50 hover:bg-slate-700 rounded-full transition-colors"
-                  >
-                    <SkipForward className="h-5 w-5 text-slate-400" />
-                  </button>
+
+              <div className="text-center mb-6">
+                <h4 className={`text-xl font-bold mb-1 ${
+                  formData.selectedPlan === plan.id ? `text-${plan.color}-400` : 'text-white'
+                }`}>
+                  {plan.name}
+                </h4>
+                <p className="text-slate-400 text-sm mb-4">{plan.description}</p>
+                <div className="flex items-baseline justify-center space-x-1">
+                  <span className={`text-3xl font-black ${
+                    formData.selectedPlan === plan.id ? `text-${plan.color}-400` : 'text-white'
+                  }`}>
+                    {plan.price}
+                  </span>
+                  <span className="text-slate-400">{plan.period}</span>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  <button onClick={toggleMute}>
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="h-5 w-5 text-slate-400" />
-                    ) : (
-                      <Volume2 className="h-5 w-5 text-slate-400" />
-                    )}
-                  </button>
-                  <div className="w-24">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={isMuted ? 0 : volume}
-                      onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                      style={{
-                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${volume}%, #374151 ${volume}%, #374151 100%)`
-                      }}
-                    />
+              </div>
+
+              <div className="space-y-3">
+                {plan.features.map((feature, index) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <Check className={`h-4 w-4 ${
+                      formData.selectedPlan === plan.id ? `text-${plan.color}-400` : 'text-emerald-400'
+                    }`} />
+                    <span className="text-sm text-slate-300">{feature}</span>
                   </div>
-                  <span className="text-xs text-slate-400 min-w-[2rem]">{volume}%</span>
+                ))}
+                {plan.limitations.map((limitation, index) => (
+                  <div key={index} className="flex items-center space-x-3 opacity-60">
+                    <X className="h-4 w-4 text-red-400" />
+                    <span className="text-sm text-slate-400">{limitation}</span>
+                  </div>
+                ))}
+              </div>
+
+              {formData.selectedPlan === plan.id && (
+                <div className="absolute inset-0 rounded-2xl border-2 border-amber-500 bg-amber-500/5 pointer-events-none" />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
+        <div className="flex items-start space-x-3">
+          <Shield className="h-5 w-5 text-amber-400 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-white mb-1">Garantía de 30 días</h4>
+            <p className="text-sm text-slate-400">
+              Si no estás satisfecho con el servicio, te devolvemos el 100% de tu dinero en los primeros 30 días.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-xl font-bold text-white mb-2">Verificación Final</h3>
+        <p className="text-slate-400">Últimos pasos para completar tu registro</p>
+      </div>
+
+      {/* Summary */}
+      <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-6">
+        <h4 className="font-semibold text-white mb-4">Resumen de tu registro</h4>
+        <div className="space-y-3">
+          <div className="flex justify-between">
+            <span className="text-slate-400">Restaurante:</span>
+            <span className="text-white font-medium">{formData.restaurantName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Email:</span>
+            <span className="text-white">{formData.email}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Plan seleccionado:</span>
+            <span className="text-amber-400 font-medium">
+              {plans.find(p => p.id === formData.selectedPlan)?.name} - {plans.find(p => p.id === formData.selectedPlan)?.price}/mes
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Contacto:</span>
+            <span className="text-white">{formData.ownerName}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Upload */}
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-2">
+          Documento de verificación (opcional)
+        </label>
+        <div className="relative">
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-600 border-dashed rounded-xl cursor-pointer bg-slate-700/30 hover:bg-slate-700/50 transition-all duration-200">
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              <Upload className="w-8 h-8 mb-3 text-slate-400" />
+              <p className="mb-2 text-sm text-slate-400">
+                <span className="font-semibold">Click para subir</span> tu RUT, cámara de comercio o similar
+              </p>
+              <p className="text-xs text-slate-500">PDF, JPG, PNG (MAX. 5MB)</p>
+            </div>
+            <input 
+              type="file" 
+              className="hidden" 
+              onChange={handleFileUpload} 
+              accept=".pdf,.jpg,.jpeg,.png" 
+            />
+          </label>
+          {formData.businessDocument && (
+            <p className="mt-2 text-sm text-emerald-400 flex items-center space-x-1">
+              <CheckCircle className="h-4 w-4" />
+              <span>Documento cargado: {formData.businessDocument.name}</span>
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Terms */}
+      <div className="space-y-4">
+        <label className="flex items-start space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.acceptTerms}
+            onChange={(e) => handleInputChange('acceptTerms', e.target.checked)}
+            className={`mt-1 h-4 w-4 text-amber-500 focus:ring-amber-500 border-slate-600 rounded bg-slate-800 ${
+              errors.acceptTerms ? 'ring-1 ring-red-500' : ''
+            }`}
+          />
+          <div className="text-sm">
+            <span className="text-slate-300">
+              Acepto los{' '}
+              <button type="button" className="text-amber-400 hover:text-amber-300 underline">
+                términos de servicio
+              </button>{' '}
+              y la{' '}
+              <button type="button" className="text-amber-400 hover:text-amber-300 underline">
+                política de privacidad
+              </button>
+            </span>
+            {errors.acceptTerms && (
+              <p className="mt-1 text-red-400 flex items-center space-x-1">
+                <AlertCircle className="h-3 w-3" />
+                <span className="text-xs">{errors.acceptTerms}</span>
+              </p>
+            )}
+          </div>
+        </label>
+
+        <label className="flex items-start space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={formData.acceptMarketing}
+            onChange={(e) => handleInputChange('acceptMarketing', e.target.checked)}
+            className="mt-1 h-4 w-4 text-amber-500 focus:ring-amber-500 border-slate-600 rounded bg-slate-800"
+          />
+          <span className="text-sm text-slate-300">
+            Quiero recibir noticias sobre nuevas funcionalidades y promociones especiales
+          </span>
+        </label>
+      </div>
+
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+        <div className="flex items-start space-x-3">
+          <Calendar className="h-5 w-5 text-blue-400 mt-0.5" />
+          <div>
+            <h4 className="font-semibold text-blue-400 mb-1">Proceso de verificación</h4>
+            <p className="text-sm text-slate-400">
+              Tu cuenta será revisada en 24-48 horas. Recibirás un email de confirmación una vez aprobada.
+              Mientras tanto, tendrás acceso a todas las funciones básicas.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-amber-900 to-slate-900 text-white">
+      {/* Animated Background */}
+      <div className="fixed inset-0 overflow-hidden">
+        <div className="absolute -inset-10 opacity-20">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+          <div className="absolute top-1/3 right-1/4 w-96 h-96 bg-yellow-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-orange-500 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style={{animationDelay: '4s'}}></div>
+        </div>
+      </div>
+
+      <div className="relative z-10 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          
+          {/* Back Button */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-2 text-slate-400 hover:text-white mb-8 transition-colors group"
+            >
+              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+              <span>Volver</span>
+            </button>
+          )}
+
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-xl opacity-20 blur"></div>
+                <div className="relative bg-gradient-to-br from-amber-500 to-yellow-600 p-4 rounded-xl">
+                  <Crown className="h-10 w-10 text-white" />
                 </div>
               </div>
             </div>
+            
+            <h1 className="text-3xl font-black bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent mb-2">
+              Registra tu Restaurante
+            </h1>
+            <p className="text-slate-400 mb-8">
+              Únete a la plataforma líder en experiencias musicales gastronómicas
+            </p>
 
-            {/* Recent Requests */}
-            <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6 lg:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-                  <Clock className="h-5 w-5 text-purple-400" />
-                  <span>Peticiones Recientes</span>
-                </h2>
-                <button className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors">
-                  <RefreshCw className="h-4 w-4" />
-                  <span className="text-sm">Actualizar</span>
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                {recentRequests.length > 0 ? recentRequests.map((request, index) => (
-                  <div key={request.id || index} className="flex items-center space-x-4 p-4 bg-slate-700/30 rounded-xl hover:bg-slate-700/50 transition-colors">
-                    <img 
-                      src={request.image || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=50&h=50&fit=crop"}
-                      alt={request.title}
-                      className="w-12 h-12 object-cover rounded-lg"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-white">{request.title}</h4>
-                      <p className="text-slate-400 text-sm">{request.artist}</p>
-                    </div>
-                    
-                    <div className="text-right">
-                      <p className="text-slate-300 text-sm font-medium">{request.userTable}</p>
-                      <p className="text-slate-500 text-xs">
-                        {new Date(request.createdAt || request.requestedAt).toLocaleTimeString('es-ES', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                    
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
-                      {getStatusText(request.status)}
-                    </div>
+            {/* Progress Steps */}
+            <div className="flex items-center justify-center space-x-4 mb-8">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
+                    currentStep >= step 
+                      ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' 
+                      : 'bg-slate-700 text-slate-400'
+                  }`}>
+                    {step}
                   </div>
-                )) : (
-                  <div className="text-center py-12">
-                    <Clock className="h-16 w-16 text-slate-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-400 mb-2">No hay peticiones recientes</h3>
-                    <p className="text-slate-500">Las peticiones de música aparecerán aquí</p>
-                  </div>
-                )}
-              </div>
+                  {step < 3 && (
+                    <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
+                      currentStep > step ? 'bg-amber-500' : 'bg-slate-700'
+                    }`} />
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Right Column */}
-          <div className="space-y-8">
+          {/* Form Container */}
+          <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8">
             
-            {/* Popular Songs */}
-            <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center space-x-2">
-                <Star className="h-5 w-5 text-yellow-400" />
-                <span>Canciones Populares</span>
-              </h2>
-              
-              <div className="space-y-4">
-                {popularSongsList.length > 0 ? popularSongsList.map((song, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-white text-sm">{song.title}</h4>
-                      <p className="text-slate-400 text-xs">{song.artist}</p>
-                    </div>
-                    <div className="flex items-center space-x-1 text-yellow-400">
-                      <Star className="h-3 w-3" />
-                      <span className="text-xs">{song.requests}</span>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-8">
-                    <Music className="h-12 w-12 text-slate-500 mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm">No hay datos de popularidad</p>
-                    <p className="text-slate-500 text-xs mt-1">Los datos aparecerán cuando haya más peticiones</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Step Content */}
+            {currentStep === 1 && renderStep1()}
+            {currentStep === 2 && renderStep2()}
+            {currentStep === 3 && renderStep3()}
 
-            {/* Quick Actions */}
-            <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6">
-              <h2 className="text-xl font-bold text-white mb-6">Acciones Rápidas</h2>
-              
-              <div className="space-y-3">
-                <button className="w-full flex items-center space-x-3 p-3 bg-slate-700/50 hover:bg-slate-700 rounded-xl transition-colors text-left">
-                  <Settings className="h-5 w-5 text-blue-400" />
-                  <span className="text-white">Configuración</span>
-                </button>
-                
-                <button className="w-full flex items-center space-x-3 p-3 bg-slate-700/50 hover:bg-slate-700 rounded-xl transition-colors text-left">
-                  <Bell className="h-5 w-5 text-yellow-400" />
-                  <span className="text-white">Notificaciones</span>
-                </button>
-                
-                <button className="w-full flex items-center space-x-3 p-3 bg-slate-700/50 hover:bg-slate-700 rounded-xl transition-colors text-left">
-                  <BarChart3 className="h-5 w-5 text-emerald-400" />
-                  <span className="text-white">Reportes</span>
-                </button>
-                
-                <button className="w-full flex items-center space-x-3 p-3 bg-slate-700/50 hover:bg-slate-700 rounded-xl transition-colors text-left">
-                  <Eye className="h-5 w-5 text-purple-400" />
-                  <span className="text-white">Ver Como Cliente</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Restaurant Info */}
-            {restaurant && (
-              <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-6">
-                <h2 className="text-xl font-bold text-white mb-6">Información del Restaurante</h2>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <img 
-                      src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=50&h=50&fit=crop"}
-                      alt={restaurant.name}
-                      className="w-12 h-12 rounded-lg object-cover"
-                    />
-                    <div>
-                      <h4 className="font-semibold text-white">{restaurant.name}</h4>
-                      <p className="text-slate-400 text-sm">{restaurant.email}</p>
-                    </div>
-                  </div>
-                  
-                  {restaurant.city && (
-                    <div className="text-sm text-slate-400">
-                      <span className="font-medium">Ubicación:</span> {restaurant.city}
-                      {restaurant.country && `, ${restaurant.country}`}
-                    </div>
-                  )}
-                  
-                  <div className="text-sm text-slate-400">
-                    <span className="font-medium">Plan:</span> 
-                    <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                      restaurant.subscriptionPlan === 'premium' 
-                        ? 'bg-yellow-500/20 text-yellow-400' 
-                        : restaurant.subscriptionPlan === 'enterprise'
-                        ? 'bg-purple-500/20 text-purple-400'
-                        : 'bg-slate-500/20 text-slate-400'
-                    }`}>
-                      {restaurant.subscriptionPlan || 'free'}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-4 text-xs text-slate-500 pt-2 border-t border-slate-700/30">
-                    <span>Límite por usuario: {restaurant.maxRequestsPerUser || 2}</span>
-                    <span>Cola máxima: {restaurant.queueLimit || 50}</span>
-                  </div>
-                </div>
+            {/* Submit Error */}
+            {errors.submit && (
+              <div className="mt-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                <p className="text-red-400 text-sm flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{errors.submit}</span>
+                </p>
               </div>
             )}
+
+            {/* Navigation Buttons */}
+            <div className="flex justify-between mt-8">
+              <button
+                onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : null}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                  currentStep > 1
+                    ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                }`}
+                disabled={currentStep === 1}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Anterior</span>
+              </button>
+
+              <button
+                onClick={handleNext}
+                disabled={isLoading}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-yellow-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Procesando...</span>
+                  </>
+                ) : currentStep === 3 ? (
+                  <>
+                    <Crown className="h-5 w-5" />
+                    <span>Completar Registro</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{currentStep === 1 ? 'Continuar' : 'Finalizar'}</span>
+                    <ArrowRight className="h-5 w-5" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="text-center mt-8 space-y-4">
+            <p className="text-slate-400 text-sm">
+              ¿Ya tienes una cuenta?{' '}
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
+              >
+                Inicia sesión aquí
+              </button>
+            </p>
+
+            {onSwitchToCustomer && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-700"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-slate-900 text-slate-500">¿Eres cliente?</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onSwitchToCustomer}
+                  className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 text-blue-400 rounded-lg font-medium hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-purple-500/20 transition-all duration-300"
+                >
+                  <Headphones className="h-4 w-4" />
+                  <span>Acceso de Cliente</span>
+                </button>
+              </>
+            )}
+
+            <div className="pt-6 border-t border-slate-800">
+              <p className="text-xs text-slate-500">
+                Al registrar tu restaurante, aceptas nuestros términos de servicio empresarial.
+                <br />Todos los datos están protegidos bajo estrictas medidas de seguridad.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -517,4 +792,4 @@ const AdminDashboard = ({
   );
 };
 
-export default AdminDashboard;
+export default AdminRegister;

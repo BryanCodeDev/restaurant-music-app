@@ -18,6 +18,10 @@ import QueueManager from './components/admin/QueueManager';
 import MusicPlayer from './components/music/MusicPlayer';
 import UserLimitManager from './components/music/UserLimitManager';
 
+// Auth Components (nuevos)
+import Login from './components/auth/Login';
+import Register from './components/auth/Register';
+
 // Services & Hooks
 import apiService from './services/apiService';
 import { useRestaurantMusic } from './hooks/useRestaurantMusic';
@@ -29,6 +33,12 @@ function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
   const [authError, setAuthError] = useState(null);
+  
+  // User Authentication State (nuevo)
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Music App State
   const [currentView, setCurrentView] = useState('home');
@@ -77,6 +87,19 @@ function App() {
         }
       }
 
+      // Check for user session (nuevo)
+      const userSession = localStorage.getItem('musicmenu_user');
+      if (userSession) {
+        try {
+          const userData = JSON.parse(userSession);
+          setCurrentUser(userData);
+          setIsAuthenticated(true);
+        } catch (error) {
+          localStorage.removeItem('musicmenu_user');
+          console.log('Invalid user session, cleared');
+        }
+      }
+
       // Check for customer session
       const customerSession = apiService.getCurrentSession();
       if (customerSession?.user) {
@@ -104,6 +127,78 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // User Authentication Handlers (nuevos)
+  const handleShowLogin = () => {
+    setAuthMode('login');
+    setShowAuthModal(true);
+    setAuthError(null);
+  };
+
+  const handleShowRegister = () => {
+    setAuthMode('register');
+    setShowAuthModal(true);
+    setAuthError(null);
+  };
+
+  const handleUserLogin = async (credentials) => {
+    setAuthError(null);
+    try {
+      // Simular autenticación de usuario (reemplaza con tu API real)
+      const result = await apiService.loginUser(credentials);
+      
+      if (result.success && result.data) {
+        setCurrentUser(result.data);
+        setIsAuthenticated(true);
+        localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
+        setShowAuthModal(false);
+      } else {
+        throw new Error(result.message || 'Error al iniciar sesión');
+      }
+    } catch (error) {
+      const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
+      setAuthError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const handleUserRegister = async (data) => {
+    setAuthError(null);
+    try {
+      // Simular registro de usuario (reemplaza con tu API real)
+      const result = await apiService.registerUser(data);
+      
+      if (result.success && result.data) {
+        setCurrentUser(result.data);
+        setIsAuthenticated(true);
+        localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
+        setShowAuthModal(false);
+      } else {
+        throw new Error(result.message || 'Error al registrar usuario');
+      }
+    } catch (error) {
+      const errorMessage = error.message || 'Error al registrar el usuario';
+      setAuthError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const handleUserLogout = () => {
+    setCurrentUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('musicmenu_user');
+    setShowAuthModal(false);
+  };
+
+  const handleProfile = () => {
+    // Implementar vista de perfil
+    console.log('Mostrar perfil de usuario');
+  };
+
+  const handleSettings = () => {
+    // Implementar configuraciones de usuario
+    console.log('Mostrar configuraciones');
   };
 
   // Restaurant Selection Handler
@@ -287,6 +382,45 @@ function App() {
     );
   }
 
+  // Render User Auth Modal (nuevo)
+  const renderAuthModal = () => {
+    if (!showAuthModal) return null;
+
+    const handleCloseModal = () => {
+      setShowAuthModal(false);
+      setAuthError(null);
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <div 
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={handleCloseModal}
+        />
+        
+        {/* Modal */}
+        <div className="relative z-10 w-full max-w-md mx-4">
+          {authMode === 'login' ? (
+            <Login
+              onLogin={handleUserLogin}
+              onSwitchToRegister={() => setAuthMode('register')}
+              onSwitchToCustomer={handleCloseModal}
+              isLoading={false}
+              error={authError}
+            />
+          ) : (
+            <Register
+              onRegister={handleUserRegister}
+              onSwitchToLogin={() => setAuthMode('login')}
+              onSwitchToCustomer={handleCloseModal}
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Render Customer Music App
   const renderMusicApp = () => {
     if (!selectedRestaurant) {
@@ -302,7 +436,11 @@ function App() {
 
     // Provide safe defaults for restaurantMusic
     const safeRestaurantMusic = {
-      userSession: restaurantMusic?.userSession || null,
+      userSession: {
+        ...restaurantMusic?.userSession,
+        isAuthenticated: isAuthenticated,
+        type: isAuthenticated ? 'user' : 'guest'
+      },
       requests: restaurantMusic?.requests || [],
       favorites: restaurantMusic?.favorites || [],
       stats: restaurantMusic?.stats || {},
@@ -392,6 +530,13 @@ function App() {
           restaurant={selectedRestaurant}
           userTable={safeRestaurantMusic.userSession?.tableNumber}
           onSwitchToAdmin={switchToAdminMode}
+          isAuthenticated={isAuthenticated}
+          user={currentUser}
+          onShowLogin={handleShowLogin}
+          onShowRegister={handleShowRegister}
+          onLogout={handleUserLogout}
+          onProfile={handleProfile}
+          onSettings={handleSettings}
         />
         
         <main className="min-h-screen pb-24">
@@ -418,6 +563,9 @@ function App() {
             isFavorite={safeRestaurantMusic.favorites?.some(fav => fav.id === currentSong.id)}
           />
         )}
+
+        {/* Auth Modal */}
+        {renderAuthModal()}
       </div>
     );
   };

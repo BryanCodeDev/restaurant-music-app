@@ -317,16 +317,28 @@ export const useRestaurantMusic = (restaurantSlug) => {
   };
 
   const toggleFavorite = async (song) => {
-    if (!song?.id || !userSession?.id) {
-      setError('Información inválida para favoritos');
+    if (!song?.id) {
+      setError('Información de canción inválida');
+      return false;
+    }
+
+    // NUEVO: Verificar si el usuario está autenticado (no es sesión temporal)
+    if (!userSession?.id || userSession?.type === 'guest' || !userSession?.isAuthenticated) {
+      setError('Para guardar favoritos necesitas crear una cuenta e iniciar sesión');
       return false;
     }
 
     try {
+      console.log('Toggle favorite for authenticated user:', {
+        userId: userSession.id,
+        songId: song.id,
+        userType: userSession.type
+      });
+      
       const response = await apiService.toggleFavorite(userSession.id, song.id);
       
       if (response) {
-        // Actualizar favoritos localmente basándose en la respuesta
+        // Actualizar favoritos localmente
         setFavorites(prev => {
           const exists = prev.find(fav => fav.id === song.id);
           if (exists) {
@@ -335,7 +347,7 @@ export const useRestaurantMusic = (restaurantSlug) => {
             return [...prev, { ...song, dateAdded: new Date() }];
           }
         });
-        setError(null); // Limpiar error si fue exitoso
+        setError(null);
         return true;
       }
       

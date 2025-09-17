@@ -26,8 +26,8 @@ const Navbar = ({
   // Nuevas props para autenticación
   isAuthenticated = false,
   user = null,
-  onLogin,
-  onRegister,
+  onShowLogin,
+  onShowRegister,
   onLogout,
   onProfile,
   onSettings
@@ -63,6 +63,20 @@ const Navbar = ({
       window.location.reload();
     }
     setShowUserMenu(false);
+  };
+
+  const handleShowLogin = () => {
+    if (onShowLogin) {
+      onShowLogin();
+    }
+    closeAllMenus();
+  };
+
+  const handleShowRegister = () => {
+    if (onShowRegister) {
+      onShowRegister();
+    }
+    closeAllMenus();
   };
 
   const closeAllMenus = () => {
@@ -271,10 +285,7 @@ const Navbar = ({
                       <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50">
                         <div className="p-2">
                           <button
-                            onClick={() => {
-                              onLogin?.();
-                              closeAllMenus();
-                            }}
+                            onClick={handleShowLogin}
                             className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
                           >
                             <LogIn className="h-5 w-5 text-emerald-400" />
@@ -282,10 +293,7 @@ const Navbar = ({
                           </button>
                           
                           <button
-                            onClick={() => {
-                              onRegister?.();
-                              closeAllMenus();
-                            }}
+                            onClick={handleShowRegister}
                             className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
                           >
                             <UserPlus className="h-5 w-5 text-blue-400" />
@@ -313,7 +321,7 @@ const Navbar = ({
                 {/* Mobile auth buttons */}
                 <div className="flex sm:hidden space-x-1">
                   <button
-                    onClick={onLogin}
+                    onClick={handleShowLogin}
                     className="p-2 rounded-lg bg-slate-800/50 text-emerald-400 hover:bg-slate-800 border border-slate-700/50 hover:border-emerald-500/30 transition-all duration-200"
                     title="Iniciar Sesión"
                   >
@@ -321,7 +329,7 @@ const Navbar = ({
                   </button>
                   
                   <button
-                    onClick={onRegister}
+                    onClick={handleShowRegister}
                     className="p-2 rounded-lg bg-slate-800/50 text-blue-400 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-200"
                     title="Registrarse"
                   >
@@ -479,7 +487,7 @@ const Navbar = ({
                     <>
                       <button
                         onClick={() => {
-                          onLogin?.();
+                          handleShowLogin();
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
@@ -490,7 +498,7 @@ const Navbar = ({
                       
                       <button
                         onClick={() => {
-                          onRegister?.();
+                          handleShowRegister();
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"

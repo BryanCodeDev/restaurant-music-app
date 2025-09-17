@@ -25,7 +25,8 @@ const BrowseMusic = ({ restaurantSlug, favorites, requests, userSession }) => {
     setSearch,
     addRequest,
     toggleFavorite,
-    isFavorite
+    isFavorite,
+    setError
   } = useRestaurantMusic(restaurantSlug);
 
   const [selectedGenre, setSelectedGenre] = useState('all');
@@ -78,7 +79,45 @@ const BrowseMusic = ({ restaurantSlug, favorites, requests, userSession }) => {
   };
 
   const handleToggleFavorite = async (song) => {
-    await toggleFavorite(song);
+    // Verificar si es usuario autenticado
+    if (!userSession?.isAuthenticated || userSession?.type === 'guest') {
+      // Mostrar modal o mensaje informativo
+      setError('Para guardar favoritos necesitas crear una cuenta e iniciar sesión. Los favoritos te permiten encontrar rápidamente tu música preferida.');
+      return;
+    }
+    const success = await toggleFavorite(song);
+    if (success) {
+      // Opcional: mostrar mensaje de éxito
+      console.log(`${isFavorite(song.id) ? 'Agregado a' : 'Removido de'} favoritos: ${song.title}`);
+    }
+  };
+
+  // También modificar el botón de favoritos para mostrar estado visual diferente
+  const renderFavoriteButton = (song) => {
+    const isAuth = userSession?.isAuthenticated && userSession?.type !== 'guest';
+    const songIsFavorite = isAuth && isFavorite(song.id);
+    
+    return (
+      <button
+        onClick={() => handleToggleFavorite(song)}
+        className={`p-2 rounded-full backdrop-blur-md transition-all duration-200 ${
+          !isAuth
+            ? 'bg-slate-900/80 text-slate-400 hover:text-slate-300'
+            : songIsFavorite
+            ? 'bg-red-500/80 text-white'
+            : 'bg-slate-900/80 text-slate-300 hover:text-red-400'
+        }`}
+        title={
+          !isAuth 
+            ? 'Inicia sesión para guardar favoritos'
+            : songIsFavorite 
+            ? 'Quitar de favoritos'
+            : 'Agregar a favoritos'
+        }
+      >
+        <Heart className={`h-4 w-4 ${songIsFavorite ? 'fill-current' : ''}`} />
+      </button>
+    );
   };
 
   const isRequested = (songId) => {
@@ -201,16 +240,7 @@ const BrowseMusic = ({ restaurantSlug, favorites, requests, userSession }) => {
                 
                 {/* Action Buttons Overlay */}
                 <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  <button
-                    onClick={() => handleToggleFavorite(song)}
-                    className={`p-2 rounded-full backdrop-blur-md transition-all duration-200 ${
-                      isFavorite(song.id)
-                        ? 'bg-red-500/80 text-white'
-                        : 'bg-slate-900/80 text-slate-300 hover:text-red-400'
-                    }`}
-                  >
-                    <Heart className={`h-4 w-4 ${isFavorite(song.id) ? 'fill-current' : ''}`} />
-                  </button>
+                  {renderFavoriteButton(song)}
                 </div>
 
                 {/* Duration Badge */}
