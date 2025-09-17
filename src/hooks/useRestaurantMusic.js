@@ -9,6 +9,8 @@ export const useRestaurantMusic = (restaurantSlug) => {
   const [requests, setRequests] = useState([]);
   const [userSession, setUserSession] = useState(null);
   const [restaurant, setRestaurant] = useState(null);
+  const [planType, setPlanType] = useState('basic');
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
   
   // Estados de UI
   const [loading, setLoading] = useState(false);
@@ -121,11 +123,17 @@ export const useRestaurantMusic = (restaurantSlug) => {
 
   const loadRestaurantInfo = async () => {
     if (!restaurantSlug) return;
-
+  
     try {
       const response = await apiService.getRestaurantBySlug(restaurantSlug);
       if (response && response.restaurant) {
-        setRestaurant(response.restaurant);
+        const restData = response.restaurant;
+        setRestaurant(restData);
+        // Extraer planType y estado Spotify
+        setPlanType(restData.plan_type || 'basic');
+        if (planType === 'pro') {
+          setSpotifyConnected(!!restData.spotify_tokens || !!restData.spotify_connected);
+        }
       }
     } catch (err) {
       console.error('Error loading restaurant info:', err);
@@ -185,36 +193,49 @@ export const useRestaurantMusic = (restaurantSlug) => {
       console.warn('No restaurant slug provided for searchSongs');
       return;
     }
-
+  
     try {
       setSongsLoading(true);
       
       if (!query || query.trim().length < 2) {
-        // Si la query está vacía, cargar todas las canciones
+        // Si la query está vacía, cargar todas las canciones (usa loadSongs que ahora es condicional)
         await loadSongs();
         return;
       }
-
+  
       const options = {};
       if (currentGenre !== 'all') {
         options.genre = currentGenre;
       }
-
-      const response = await apiService.searchSongs(restaurantSlug, query.trim(), options);
+  
+      // Usar searchMusic dual
+      const response = await apiService.searchMusic(query.trim(), planType, restaurantSlug, options);
       
-      if (response && response.songs) {
-        setSongs(response.songs);
-      } else {
-        throw new Error('Search failed - invalid response');
+      let results = [];
+      if (planType === 'pro' && response.success && response.tracks) {
+        results = response.tracks;
+      } else if (response && response.songs) {
+        results = response.songs;
       }
       
+      // Unificar: añadir source para UI
+      results = results.map(song => ({
+        ...song,
+        source: planType === 'pro' ? 'spotify' : 'bd'
+      }));
+      
+      setSongs(results);
     } catch (err) {
       console.error('Error searching songs:', err);
-      setError(`Error en la búsqueda: ${err.message}`);
+      if (planType === 'pro' && err.message.includes('SpotifyNotConnected')) {
+        setError('Conecta tu cuenta de Spotify para buscar en el plan Pro');
+      } else {
+        setError(`Error en la búsqueda: ${err.message}`);
+      }
     } finally {
       setSongsLoading(false);
     }
-  }, [restaurantSlug, currentGenre]);
+  }, [restaurantSlug, currentGenre, planType]);
 
   const loadUserRequests = async (tableNumber) => {
     if (!restaurantSlug || !tableNumber) {
@@ -246,57 +267,69 @@ export const useRestaurantMusic = (restaurantSlug) => {
       setError('No hay restaurante seleccionado');
       return false;
     }
-
+  
     if (!song?.id) {
       setError('Información de canción inválida');
       return false;
     }
-
+  
     if (!userSession?.tableNumber) {
       setError('Sesión no encontrada');
       return false;
     }
-
+  
     // Verificar si la canción ya está en la cola
     const alreadyRequested = requests.some(
       req => req.song_id === song.id && ['pending', 'playing'].includes(req.status)
     );
-
+  
     if (alreadyRequested) {
       setError('Esta canción ya está en tu cola');
       return false;
     }
-
+  
+    // Para Pro, verificar conexión Spotify
+    if (planType === 'pro' && !spotifyConnected) {
+      setError('Conecta tu cuenta de Spotify para agregar canciones del plan Pro');
+      return false;
+    }
+  
     try {
-      console.log('Creating request:', { restaurantSlug, songId: song.id, tableNumber: userSession.tableNumber, userType });
-
-      // La API maneja el user_type internamente basado en token/session
-      const response = await apiService.createRequest(
-        restaurantSlug,
-        song.id,
-        userSession.tableNumber
-      );
-
-      console.log('Request created:', response);
-
-      if (response && response.request) {
-        // Recargar requests para obtener datos actualizados
+      console.log('Adding to queue:', { restaurantSlug, songId: song.id, tableNumber: userSession.tableNumber, planType, source: song.source });
+  
+      // Usar addToQueue dual
+      const songData = {
+        songId: song.id,
+        trackId: song.trackId, // Para Spotify
+        uri: song.uri, // Para Spotify
+        title: song.title,
+        artist: song.artist,
+        source: song.source || (planType === 'pro' ? 'spotify' : 'bd')
+      };
+  
+      const response = await apiService.addToQueue(songData, planType, restaurantSlug, userSession.tableNumber);
+  
+      console.log('Queue added:', response);
+  
+      if (response && (response.request || response.success)) {
+        // Recargar requests para obtener datos actualizados (usa getUnifiedQueue en futuro)
         await loadUserRequests(userSession.tableNumber);
         
-        // AGREGAR: Limpiar error si fue exitoso
+        // Limpiar error si exitoso
         setError(null);
         
         return true;
       } else {
-        throw new Error('Error creating request - invalid response');
+        throw new Error('Error adding to queue - invalid response');
       }
     } catch (err) {
       console.error('Error adding request:', err);
       
-      // MEJORAR: Manejo más específico de errores
       let errorMessage = 'Error al enviar la petición';
       
-      if (err.message.includes('Validation failed')) {
+      if (planType === 'pro' && err.message.includes('SpotifyNotConnected')) {
+        errorMessage = 'Conecta Spotify para continuar';
+      } else if (err.message.includes('Validation failed')) {
         errorMessage = 'Datos inválidos. Por favor intenta de nuevo.';
       } else if (err.message.includes('Queue is full')) {
         errorMessage = 'La cola está llena. Intenta más tarde.';
@@ -478,6 +511,8 @@ export const useRestaurantMusic = (restaurantSlug) => {
     requests,
     userSession,
     restaurant,
+    planType,
+    spotifyConnected,
     
     // Estados de UI
     loading,

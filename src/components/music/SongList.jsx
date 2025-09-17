@@ -12,12 +12,12 @@ import {
   RefreshCw
 } from 'lucide-react';
 
-const SongList = ({ 
-  songs = [], 
-  favorites = [], 
+const SongList = ({
+  songs = [],
+  favorites = [],
   userRequests = [],
-  onToggleFavorite, 
-  onAddRequest, 
+  onToggleFavorite,
+  onAddRequest,
   loading = false,
   error = null,
   onRetry,
@@ -27,7 +27,8 @@ const SongList = ({
   currentFilter = 'all',
   totalSongs = 0,
   hasMore = false,
-  onLoadMore
+  onLoadMore,
+  planType = 'basic' // Nuevo prop para dual UI
 }) => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [sortBy, setSortBy] = useState('title'); // 'title', 'artist', 'popularity', 'year'
@@ -48,19 +49,32 @@ const SongList = ({
   // Función para ordenar canciones
   const sortSongs = (songsToSort) => {
     return [...songsToSort].sort((a, b) => {
-      let valueA = a[sortBy];
-      let valueB = b[sortBy];
+      let valueA, valueB;
       
-      // Manejar diferentes tipos de datos
-      if (typeof valueA === 'string') {
-        valueA = valueA.toLowerCase();
-        valueB = valueB.toLowerCase();
+      switch (sortBy) {
+        case 'artist':
+          valueA = typeof a.artist === 'string' ? a.artist : a.artists?.[0]?.name || '';
+          valueB = typeof b.artist === 'string' ? b.artist : b.artists?.[0]?.name || '';
+          valueA = valueA.toLowerCase();
+          valueB = valueB.toLowerCase();
+          break;
+        case 'popularity':
+          valueA = a.popularity || a.popularity_score || 0;
+          valueB = b.popularity || b.popularity_score || 0;
+          break;
+        default:
+          valueA = a[sortBy];
+          valueB = b[sortBy];
+          if (typeof valueA === 'string') {
+            valueA = valueA.toLowerCase();
+            valueB = valueB.toLowerCase();
+          }
       }
       
-      // Manejar valores undefined o null
+      // Manejar undefined/null
       if (valueA == null) valueA = '';
       if (valueB == null) valueB = '';
-      
+
       const comparison = valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
       return sortOrder === 'asc' ? comparison : -comparison;
     });
@@ -134,6 +148,11 @@ const SongList = ({
       </h3>
       <div className="space-y-2 text-slate-400">
         <p>No hay canciones que coincidan con tu búsqueda.</p>
+        {planType === 'pro' && !searchTerm && (
+          <p className="text-sm">
+            Conecta tu cuenta de Spotify para acceder a millones de canciones.
+          </p>
+        )}
         {currentFilter !== 'all' && (
           <p className="text-sm">
             Intenta cambiar el filtro o buscar términos diferentes
@@ -176,6 +195,14 @@ const SongList = ({
             {currentFilter !== 'all' && (
               <p className="text-sm text-slate-500">
                 Filtrado por: <span className="text-blue-400 capitalize">{currentFilter}</span>
+              </p>
+            )}
+            {/* Source counts */}
+            {planType === 'pro' && songs.length > 0 && (
+              <p className="text-xs text-slate-500 mt-1">
+                <span className="text-slate-400">Fuentes: </span>
+                <span className="mr-2">{sortedSongs.filter(s => s.source === 'bd').length} BD</span>
+                <span>{sortedSongs.filter(s => s.source === 'spotify').length} Spotify</span>
               </p>
             )}
           </div>
@@ -260,6 +287,8 @@ const SongList = ({
             userRequests={userRequests}
             maxRequestsReached={maxRequestsReached}
             disabled={loading}
+            planType={planType}
+            source={song.source}
           />
         ))}
       </div>

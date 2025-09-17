@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Play, 
-  Pause, 
-  SkipForward, 
-  SkipBack, 
-  Volume2, 
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Volume2,
   VolumeX,
   Heart,
   MoreHorizontal,
@@ -16,19 +16,29 @@ import {
   ChevronUp,
   ChevronDown
 } from 'lucide-react';
+import apiService from '../../services/apiService';
 
-const MusicPlayer = ({ 
-  currentSong, 
-  queue = [], 
-  isPlaying = false, 
+const MusicPlayer = ({
+  currentSong,
+  queue = [],
+  isPlaying = false,
   volume = 75,
   onPlayPause,
   onNext,
   onPrevious,
   onVolumeChange,
   onToggleFavorite,
-  isFavorite = false
+  isFavorite = false,
+  planType = 'basic',
+  spotifyConnected = false,
+  restaurantSlug,
+  onPlaySong // De useMusic
 }) => {
+  const audioRef = useRef(null);
+  const [player, setPlayer] = useState(null);
+  const [accessToken, setAccessToken] = useState(null);
+  const [deviceId, setDeviceId] = useState(null);
+  const [sdkReady, setSdkReady] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [showVolumeControl, setShowVolumeControl] = useState(false);
@@ -36,19 +46,149 @@ const MusicPlayer = ({
   const [isShuffled, setIsShuffled] = useState(false);
   const [repeatMode, setRepeatMode] = useState('none'); // 'none', 'one', 'all'
 
-  // Mock progress for demo
+  // Fetch accessToken for Pro
   useEffect(() => {
-    if (isPlaying && currentSong) {
-      const interval = setInterval(() => {
-        setCurrentTime(prev => {
-          const duration = parseDuration(currentSong.duration);
-          const newTime = prev + 1;
-          return newTime >= duration ? 0 : newTime;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
+    if (planType === 'pro' && spotifyConnected && restaurantSlug) {
+      const fetchToken = async () => {
+        try {
+          const restaurant = await apiService.getRestaurantPlan(restaurantSlug);
+          if (restaurant && restaurant.spotify_tokens) {
+            setAccessToken(restaurant.spotify_tokens.access_token);
+          } else {
+            await apiService.refreshSpotifyToken(restaurant.id);
+            const refreshed = await apiService.getRestaurantPlan(restaurantSlug);
+            setAccessToken(refreshed.spotify_tokens.access_token);
+          }
+        } catch (err) {
+          console.error('Token fetch error:', err);
+        }
+      };
+      fetchToken();
     }
-  }, [isPlaying, currentSong]);
+  }, [planType, spotifyConnected, restaurantSlug]);
+
+  // Load Spotify SDK for Pro
+  useEffect(() => {
+    if (planType !== 'pro' || !accessToken) return;
+
+    const script = document.createElement('script');
+    script.src = 'https://sdk.scdn.co/spotify-player.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const spotifyPlayer = new window.Spotify.Player({
+        name: 'Restaurant Music Player',
+        getOAuthToken: (cb) => cb(accessToken),
+        volume: volume / 100
+      });
+
+      // Event handlers
+      spotifyPlayer.addListener('ready', ({ device_id }) => {
+        console.log('Ready with Device ID', device_id);
+        setDeviceId(device_id);
+      });
+
+      spotifyPlayer.addListener('not_ready', ({ device_id }) => {
+        console.log('Device ID has gone offline', device_id);
+        setDeviceId(null);
+      });
+
+      spotifyPlayer.addListener('player_state_changed', (state => {
+        if (!state) return;
+        setCurrentSong(state.track_window.current_track ? {
+          id: state.track_window.current_track.id,
+          title: state.track_window.current_track.name,
+          artist: state.track_window.current_track.artists[0].name,
+          image: state.track_window.current_track.album.images[0].url,
+          duration: apiService.formatDuration(state.track_window.current_track.duration_ms),
+          source: 'spotify',
+          uri: state.track_window.current_track.uri
+        } : null);
+        setIsPlaying(state.is_playing);
+        setCurrentTime(state.position / 1000);
+        if (onPlayPause) onPlayPause(state.is_playing);
+      }));
+
+      spotifyPlayer.addListener('playback_error', (error) => {
+        console.error('Playback error:', error);
+      });
+
+      spotifyPlayer.connect();
+      setPlayer(spotifyPlayer);
+      setSdkReady(true);
+    };
+
+    return () => {
+      document.body.removeChild(script);
+      if (player) player.disconnect();
+    };
+  }, [planType, accessToken, volume]);
+
+  // Audio events for Basic
+  useEffect(() => {
+    if (planType !== 'basic' || !currentSong?.preview_url || !audioRef.current) return;
+
+    const audio = audioRef.current;
+    audio.src = currentSong.preview_url;
+    audio.volume = volume / 100;
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      if (onNext) onNext();
+    };
+
+    audio.addEventListener('play', handlePlay);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [currentSong?.preview_url, volume, onNext]);
+
+  // Play/Pause handler
+  const handlePlayPause = useCallback(() => {
+    if (planType === 'basic' && audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+    } else if (planType === 'pro' && player && deviceId) {
+      player.togglePlay();
+    } else if (onPlayPause) {
+      onPlayPause();
+    }
+  }, [planType, isPlaying, player, deviceId, onPlayPause]);
+
+  // Next/Previous for Pro
+  const handleNext = useCallback(() => {
+    if (planType === 'pro' && player) {
+      player.nextTrack();
+    } else if (onNext) onNext();
+  }, [planType, player, onNext]);
+
+  const handlePrevious = useCallback(() => {
+    if (planType === 'pro' && player) {
+      player.previousTrack();
+    } else if (onPrevious) onPrevious();
+  }, [planType, player, onPrevious]);
+
+  // Play specific song
+  const handlePlaySong = useCallback(async () => {
+    if (onPlaySong && currentSong) {
+      await onPlaySong(currentSong);
+    }
+  }, [onPlaySong, currentSong]);
 
   const parseDuration = (duration) => {
     if (!duration) return 180; // Default 3 minutes
@@ -98,12 +238,38 @@ const MusicPlayer = ({
         <div className="flex items-center justify-center space-x-4 text-slate-400">
           <Music className="h-6 w-6" />
           <span>No hay música reproduciéndose</span>
+          {planType === 'pro' && !spotifyConnected && (
+            <span className="ml-2">(Conecta Spotify para reproducir)</span>
+          )}
         </div>
       </div>
     );
   }
 
   const pendingQueue = queue.filter(song => song.status === 'pending' || !song.status);
+
+  // Audio element for Basic
+  const audioElement = planType === 'basic' && currentSong.preview_url && (
+    <audio
+      ref={audioRef}
+      controls={false}
+      className="hidden"
+    />
+  );
+
+  // Spotify connection status
+  const connectionStatus = planType === 'pro' && (
+    <div className="flex items-center space-x-2 text-xs text-slate-400">
+      {spotifyConnected ? (
+        <>
+          <SpotifyIcon className="h-3 w-3" />
+          <span>Spotify conectado</span>
+        </>
+      ) : (
+        <span className="text-red-400">Spotify no conectado</span>
+      )}
+    </div>
+  );
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 z-50">
@@ -163,8 +329,8 @@ const MusicPlayer = ({
           {/* Song Info */}
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className="relative group">
-              <img 
-                src={currentSong.image || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=60&h=60&fit=crop"}
+              <img
+                src={currentSong.image || currentSong.preview_image || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=60&h=60&fit=crop"}
                 alt={currentSong.title}
                 className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover"
               />
@@ -176,6 +342,12 @@ const MusicPlayer = ({
                   <div className="w-full h-full bg-green-500 rounded-full animate-pulse"></div>
                 )}
               </div>
+              {/* Source icon */}
+              {currentSong.source === 'spotify' && (
+                <div className="absolute -bottom-1 -right-1 bg-green-500 p-1 rounded-full">
+                  <SpotifyIcon className="h-3 w-3 text-white" />
+                </div>
+              )}
             </div>
             
             <div className="min-w-0 flex-1">
@@ -212,8 +384,8 @@ const MusicPlayer = ({
             <button
               onClick={() => setIsShuffled(!isShuffled)}
               className={`p-2 rounded-full transition-colors ${
-                isShuffled 
-                  ? 'text-blue-400 bg-blue-500/20' 
+                isShuffled
+                  ? 'text-blue-400 bg-blue-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
               title="Reproducción aleatoria"
@@ -221,16 +393,16 @@ const MusicPlayer = ({
               <Shuffle className="h-4 w-4" />
             </button>
             
-            <button 
-              onClick={onPrevious}
+            <button
+              onClick={handlePrevious}
               className="p-2 text-slate-400 hover:text-white transition-colors"
               title="Canción anterior"
             >
               <SkipBack className="h-5 w-5" />
             </button>
             
-            <button 
-              onClick={onPlayPause}
+            <button
+              onClick={handlePlayPause}
               className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25"
               title={isPlaying ? 'Pausar' : 'Reproducir'}
             >
@@ -241,19 +413,19 @@ const MusicPlayer = ({
               )}
             </button>
             
-            <button 
-              onClick={onNext}
+            <button
+              onClick={handleNext}
               className="p-2 text-slate-400 hover:text-white transition-colors"
               title="Siguiente canción"
             >
               <SkipForward className="h-5 w-5" />
             </button>
-
+        
             <button
               onClick={toggleRepeat}
               className={`p-2 rounded-full transition-colors relative ${
                 repeatMode !== 'none'
-                  ? 'text-blue-400 bg-blue-500/20' 
+                  ? 'text-blue-400 bg-blue-500/20'
                   : 'text-slate-400 hover:text-white'
               }`}
               title={`Repetir: ${repeatMode === 'none' ? 'desactivado' : repeatMode === 'one' ? 'una canción' : 'todas'}`}
@@ -264,6 +436,9 @@ const MusicPlayer = ({
               )}
             </button>
           </div>
+        
+          {/* Connection status for Pro */}
+          {connectionStatus}
 
           {/* Mobile Play Button */}
           <div className="flex md:hidden items-center space-x-3">
@@ -345,6 +520,17 @@ const MusicPlayer = ({
             <button className="p-2 text-slate-400 hover:text-white transition-colors">
               <MoreHorizontal className="h-4 w-4" />
             </button>
+          
+            {/* Play song button for current if not playing */}
+            {currentSong && !isPlaying && (
+              <button
+                onClick={handlePlaySong}
+                className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+                title="Reproducir esta canción"
+              >
+                <Play className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -438,5 +624,7 @@ const MusicPlayer = ({
     </div>
   );
 };
+
+  // No append needed; <audio> rendered conditionally in JSX
 
 export default MusicPlayer;

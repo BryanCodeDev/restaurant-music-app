@@ -1,12 +1,14 @@
 import React from 'react';
 import { Play, Heart, Clock, User, Star, Disc3 } from 'lucide-react';
 
-const SongCard = ({ 
-  song, 
-  isFavorite, 
-  onToggleFavorite, 
-  onAddRequest, 
-  showRequestButton = true 
+const SongCard = ({
+  song,
+  isFavorite,
+  onToggleFavorite,
+  onAddRequest,
+  showRequestButton = true,
+  planType = 'basic',
+  source = 'bd' // 'bd' | 'spotify'
 }) => {
   const handleRequest = () => {
     onAddRequest(song);
@@ -29,9 +31,12 @@ const SongCard = ({
       {/* Imagen del álbum con overlay de play */}
       <div className="relative overflow-hidden">
         <img 
-          src={song.image} 
-          alt={`${song.title} - ${song.artist}`}
+          src={song.image || song.preview_image || (source === 'spotify' ? song.album?.images?.[1]?.url : '/default-album.jpg')}
+          alt={`${song.title} - ${song.artist || song.artists?.[0]?.name}`}
           className="w-full h-44 sm:h-48 md:h-52 object-cover transition-transform duration-700 group-hover:scale-110"
+          onError={(e) => {
+            e.target.src = source === 'spotify' ? song.album?.images?.[0]?.url : '/default-album.jpg';
+          }}
         />
         
         {/* Overlay con botón de play */}
@@ -45,10 +50,17 @@ const SongCard = ({
         
         {/* Badge de popularidad */}
         <div className="absolute top-3 right-3">
-          <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getPopularityColor(song.popularity)}`}>
+          <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getPopularityColor(song.popularity || song.popularity_score)}`}>
             <Star className="h-3 w-3" />
-            <span>{song.popularity}</span>
+            <span>{song.popularity || song.popularity_score || 0}</span>
           </div>
+          {/* Source Badge */}
+          {source === 'spotify' && (
+            <div className="absolute top-3 left-3 bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-1 rounded-full text-xs font-medium">
+              <Spotify className="h-3 w-3 inline mr-1" />
+              Spotify
+            </div>
+          )}
         </div>
       </div>
 
@@ -57,11 +69,11 @@ const SongCard = ({
         {/* Título y artista */}
         <div className="space-y-1">
           <h3 className="font-bold text-white text-lg truncate group-hover:text-blue-300 transition-colors">
-            {song.title}
+            {song.title || song.name}
           </h3>
           <div className="flex items-center text-slate-400 text-sm space-x-2">
             <User className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate">{song.artist}</span>
+            <span className="truncate">{song.artist || song.artists?.[0]?.name || 'Unknown Artist'}</span>
           </div>
         </div>
         
@@ -69,18 +81,18 @@ const SongCard = ({
         <div className="flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3" />
-            <span>{song.duration}</span>
+            <span>{song.duration || song.duration_ms ? apiService.formatDuration(song.duration_ms) : '0:00'}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Disc3 className="h-3 w-3" />
-            <span>{song.year}</span>
+            <span>{song.year || song.album?.release_date?.split('-')[0] || 'N/A'}</span>
           </div>
         </div>
 
         {/* Tag del género */}
         <div className="flex justify-start">
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 border border-blue-500/30">
-            {song.genre}
+            {song.genre || (source === 'spotify' ? song.explicit ? 'Explicit' : 'Pop' : 'General')}
           </span>
         </div>
       </div>
@@ -108,6 +120,10 @@ const SongCard = ({
             <span className="hidden sm:inline">
               {isFavorite ? 'Favorito' : 'Me gusta'}
             </span>
+            {/* Preview audio for basic plan */}
+            {planType === 'basic' && song.preview_url && (
+              <audio controls className="hidden" src={song.preview_url} />
+            )}
           </button>
 
           {/* Botón de petición */}

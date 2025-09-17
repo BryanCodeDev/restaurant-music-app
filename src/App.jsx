@@ -28,6 +28,7 @@ import Register from './components/auth/Register';
 // Services & Hooks
 import apiService from './services/apiService';
 import { useRestaurantMusic } from './hooks/useRestaurantMusic';
+import SpotifyLogin from './components/music/SpotifyLogin';
 
 function App() {
   // App State Management
@@ -36,6 +37,10 @@ function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
   const [authError, setAuthError] = useState(null);
+
+  // Global plan state
+  const [planType, setPlanType] = useState('basic');
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
   
   // User Authentication State - SIN MODALES
   const [currentUser, setCurrentUser] = useState(null);
@@ -65,7 +70,13 @@ function App() {
         setIsPlaying(true);
       }
     }
-  }, [restaurantMusic?.requests, appMode, currentSong]);
+
+    // Update global plan state
+    if (restaurantMusic?.planType) {
+      setPlanType(restaurantMusic.planType);
+      setSpotifyConnected(restaurantMusic.spotifyConnected);
+    }
+  }, [restaurantMusic?.requests, appMode, currentSong, restaurantMusic?.planType, restaurantMusic?.spotifyConnected]);
 
   const initializeApp = async () => {
     setIsLoading(true);
@@ -408,7 +419,9 @@ function App() {
       error: restaurantMusic?.error || null,
       addRequest: restaurantMusic?.addRequest || (() => Promise.resolve(false)),
       toggleFavorite: restaurantMusic?.toggleFavorite || (() => Promise.resolve(false)),
-      cancelRequest: restaurantMusic?.cancelRequest || (() => Promise.resolve(false))
+      cancelRequest: restaurantMusic?.cancelRequest || (() => Promise.resolve(false)),
+      planType,
+      spotifyConnected
     };
 
     const renderCurrentView = () => {
@@ -416,7 +429,9 @@ function App() {
         restaurantSlug: selectedRestaurant.slug,
         favorites: safeRestaurantMusic.favorites,
         requests: safeRestaurantMusic.requests,
-        userSession: safeRestaurantMusic.userSession
+        userSession: safeRestaurantMusic.userSession,
+        planType,
+        spotifyConnected
       };
 
       switch(currentView) {
@@ -491,6 +506,8 @@ function App() {
                 onToggleFavorite={safeRestaurantMusic.toggleFavorite}
                 onAddRequest={safeRestaurantMusic.addRequest}
                 restaurantSlug={selectedRestaurant.slug}
+                planType={planType}
+                spotifyConnected={spotifyConnected}
               />
             </UserLimitManager>
           );
@@ -552,6 +569,23 @@ function App() {
           {renderCurrentView()}
         </main>
         
+        {/* Spotify Login if Pro and not connected */}
+        {planType === 'pro' && !spotifyConnected && !['login', 'register'].includes(currentView) && selectedRestaurant && (
+          <SpotifyLogin
+            restaurantId={selectedRestaurant.id}
+            restaurantSlug={selectedRestaurant.slug}
+            onConnect={() => {
+              // Refresh plan after connect
+              const refreshPlan = async () => {
+                const updatedMusic = useRestaurantMusic(selectedRestaurant.slug);
+                setPlanType(updatedMusic.planType);
+                setSpotifyConnected(updatedMusic.spotifyConnected);
+              };
+              refreshPlan();
+            }}
+          />
+        )}
+      
         {/* Music Player - Solo mostrar si NO está en vistas de auth */}
         {currentSong && !['login', 'register'].includes(currentView) && (
           <MusicPlayer
@@ -565,6 +599,9 @@ function App() {
             onVolumeChange={handleVolumeChange}
             onToggleFavorite={safeRestaurantMusic.toggleFavorite}
             isFavorite={safeRestaurantMusic.favorites?.some(fav => fav.id === currentSong.id)}
+            planType={planType}
+            spotifyConnected={spotifyConnected}
+            restaurantSlug={selectedRestaurant.slug}
           />
         )}
 
@@ -664,6 +701,22 @@ function App() {
       }
     }
   };
+
+  // Error handling for plan limitations
+  const renderErrorMessage = (message) => (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-slate-800 p-6 rounded-lg max-w-md mx-4">
+        <h3 className="text-lg font-semibold text-white mb-4">{message}</h3>
+        <p className="text-slate-400 mb-6">Actualiza a plan Pro para acceder a Spotify.</p>
+        <button
+          onClick={() => setCurrentView('home')}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition-colors"
+        >
+          Volver al inicio
+        </button>
+      </div>
+    </div>
+  );
 
   return renderApp();
 }

@@ -1,16 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2, TrendingUp, Clock, Music } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Search, X, Loader2, TrendingUp, Clock, Music, Spotify } from 'lucide-react';
+import { useMusic } from '../../hooks/useMusic';
 
-const SearchBar = ({ 
-  searchTerm, 
-  onSearchChange, 
-  placeholder = "Buscar canciones, artistas o álbumes...",
+const SearchBar = ({
+  searchTerm,
+  onSearchChange,
+  placeholder: propPlaceholder,
   isLoading = false,
   recentSearches = [],
   popularSearches = [],
   onClearRecent,
-  disabled = false
+  disabled = false,
+  planType = 'basic',
+  spotifyConnected = true,
+  restaurantSlug,
+  onSpotifyLogin // Callback para login
 }) => {
+  const { searchMusic, spotifyConnected: hookSpotifyConnected } = useMusic(restaurantSlug);
+  const connected = spotifyConnected || hookSpotifyConnected;
+
+  // Placeholder condicional
+  const placeholder = propPlaceholder || (planType === 'pro' ? 'Busca en Spotify...' : 'Buscar canciones, artistas o álbumes...');
+
+  // Handler de búsqueda con useMusic
+  const handleSearchChange = useCallback((query) => {
+    onSearchChange(query);
+    if (restaurantSlug && query.trim().length >= 2) {
+      searchMusic(query);
+    }
+  }, [onSearchChange, restaurantSlug, searchMusic]);
   const [isFocused, setIsFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef(null);
@@ -38,7 +56,7 @@ const SearchBar = ({
   };
 
   const handleInputChange = (value) => {
-    onSearchChange(value);
+    handleSearchChange(value);
     setShowSuggestions(value.trim().length === 0 && (recentSearches.length > 0 || popularSearches.length > 0));
   };
 
@@ -93,14 +111,14 @@ const SearchBar = ({
           onBlur={handleInputBlur}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled}
-          className={`w-full pl-12 pr-12 py-4 bg-slate-800/50 backdrop-blur-md border-2 rounded-2xl text-white placeholder-slate-400 
+          disabled={disabled || (planType === 'pro' && !connected)}
+          className={`w-full pl-12 pr-12 py-4 bg-slate-800/50 backdrop-blur-md border-2 rounded-2xl text-white placeholder-slate-400
             focus:outline-none focus:ring-4 transition-all duration-200
             disabled:opacity-50 disabled:cursor-not-allowed ${
             isFocused
               ? 'border-blue-500 bg-slate-800/70 focus:ring-blue-500/20 shadow-lg shadow-blue-500/10'
               : 'border-slate-700/50 hover:border-slate-600/70'
-          }`}
+          } ${planType === 'pro' && !connected ? 'border-red-500/50' : ''}`}
         />
         
         {searchTerm && !disabled && (
@@ -195,7 +213,7 @@ const SearchBar = ({
         </div>
       )}
 
-      {/* Quick Search Tips */}
+      {/* Quick Search Tips y Login hint para Pro */}
       {isFocused && searchTerm.length === 0 && (
         <div className="absolute top-full left-0 right-0 mt-1">
           <div className="text-xs text-slate-500 px-4 py-2">
@@ -203,6 +221,18 @@ const SearchBar = ({
             <span className="text-slate-400">
               Prueba buscar por título, artista, álbum o género
             </span>
+            {planType === 'pro' && !connected && onSpotifyLogin && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSpotifyLogin();
+                }}
+                className="ml-2 inline-flex items-center space-x-1 text-blue-400 hover:text-blue-300"
+              >
+                <Spotify className="h-3 w-3" />
+                <span>Conectar Spotify</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -213,7 +243,9 @@ const SearchBar = ({
           <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-4">
             <div className="flex items-center space-x-3">
               <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-              <span className="text-sm text-slate-300">Buscando...</span>
+              <span className="text-sm text-slate-300">
+                {planType === 'pro' ? 'Buscando en Spotify...' : 'Buscando...'}
+              </span>
             </div>
           </div>
         </div>
