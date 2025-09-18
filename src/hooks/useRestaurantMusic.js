@@ -65,27 +65,51 @@ export const useRestaurantMusic = (restaurantSlug) => {
       
       let registeredUserId = null;
       if (userType === 'registered') {
-        // Obtener ID del usuario registrado del perfil o storage
-        const profile = await apiService.getUserProfile().catch(() => null);
-        if (profile) {
-          registeredUserId = profile.id;
+        // Obtener ID del usuario registrado del perfil o storage usando unified endpoint
+        const profileResponse = await apiService.getProfile().catch(() => null);
+        if (profileResponse?.success && profileResponse.data?.user) {
+          registeredUserId = profileResponse.data.user.id;
           localStorage.setItem('registered_user_id', registeredUserId);
         } else {
           registeredUserId = localStorage.getItem('registered_user_id');
+          // Si aún null, tratar como guest para evitar errores
+          if (!registeredUserId) {
+            console.warn('No registered user ID found, treating as guest for favorites');
+          }
         }
       }
 
-      if (!session || session.user?.restaurantSlug !== restaurantSlug) {
+      if (!session || (session?.user && session?.user.restaurantSlug !== restaurantSlug)) {
         console.log('Creating new user session for:', restaurantSlug, 'with registeredUserId:', registeredUserId);
         // Crear nueva sesión de usuario real
         session = await apiService.createUserSession(restaurantSlug, null, registeredUserId);
         console.log('Session created:', session);
       }
 
-      if (session?.user) {
-        // Asegurar que userSession tenga type
-        setUserSession({ ...session.user, userType });
-        console.log('User session set:', { ...session.user, userType });
+      // Manejar estructura de respuesta de forma segura
+      let sessionUser = null;
+      if (session) {
+        if (session.success && session.data && session.data.user) {
+          sessionUser = session.data.user;
+        } else if (session.user) {
+          sessionUser = session.user;
+        } else if (session.data) {
+          sessionUser = session.data; // Fallback si data es directamente el user
+        }
+      }
+
+      if (sessionUser) {
+        // Asegurar que userSession tenga type y registeredUserId si aplica
+        const updatedSession = {
+          ...sessionUser,
+          userType,
+          registeredUserId: userType === 'registered' ? registeredUserId : (sessionUser.registeredUserId || null)
+        };
+        setUserSession(updatedSession);
+        console.log('User session set:', updatedSession);
+      } else {
+        console.warn('No valid user data in session response:', session);
+        setError('Error al crear sesión de usuario');
       }
 
       // Cargar datos reales del servidor
@@ -94,18 +118,20 @@ export const useRestaurantMusic = (restaurantSlug) => {
         loadRestaurantInfo()
       ];
       
-      if (session?.user?.tableNumber) {
-        loadPromises.push(loadUserRequests(session.user.tableNumber));
+      // Usar sessionUser para tableNumber de forma segura
+      if (sessionUser?.tableNumber) {
+        loadPromises.push(loadUserRequests(sessionUser.tableNumber));
       }
 
-      // Cargar favorites basado en userType
+      // Cargar favorites usando sessionUser y registeredUserId
       if (userType === 'registered' && registeredUserId) {
         const favResponse = await apiService.getFavorites(registeredUserId, 'registered');
         if (favResponse?.favorites) {
           setFavorites(favResponse.favorites);
         }
-      } else if (session?.user?.id) {
-        const favResponse = await apiService.getFavorites(session.user.id, 'guest');
+      } else if (sessionUser?.id) {
+        const favUserType = userType === 'registered' ? 'registered' : 'guest';
+        const favResponse = await apiService.getFavorites(sessionUser.id, favUserType);
         if (favResponse?.favorites) {
           setFavorites(favResponse.favorites);
         }

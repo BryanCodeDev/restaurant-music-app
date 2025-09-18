@@ -213,34 +213,97 @@ function App() {
   const handleUserLogin = async (credentials) => {
     setAuthError(null);
     try {
-      const result = await apiService.loginUser(credentials.email, credentials.password);
+      let result;
+      let userType = credentials.userType || 'user';
       
-      if (result.success && result.data) {
-        const profile = await apiService.getProfile();
-        setCurrentUser(result.data);
-        setUserProfile(profile.data);
-        setIsAuthenticated(true);
-        localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
-        localStorage.setItem('user_profile', JSON.stringify(profile.data));
+      switch (userType) {
+        case 'restaurant':
+          result = await apiService.loginRestaurant(credentials.email, credentials.password);
+          localStorage.setItem('user_type', 'restaurant');
+          break;
+        case 'superadmin':
+          result = await apiService.loginUser(credentials.email, credentials.password);
+          localStorage.setItem('user_type', 'superadmin');
+          break;
+        default: // 'user'
+          result = await apiService.loginUser(credentials.email, credentials.password);
+          localStorage.setItem('user_type', 'registered');
+          break;
+      }
+      
+      // Verificar éxito de forma flexible (backend podría no retornar 'success')
+      if (result && (result.success || result.access_token || result.user || result.data)) {
+        // Usar datos del login como base
+        let userData = result.data?.user || result.user || result.data || result;
         
-        if (profile.data.type === 'registered_user') {
-          if (profile.data.role === 'superadmin') {
-            setAppMode('admin');
-            setCurrentStep('superadmin-panel');
-          } else {
-            setCurrentStep('restaurant-selection');
+        // Intentar obtener perfil adicional, pero no fallar si no se puede
+        let profileData = userData;
+        try {
+          const profileResponse = await apiService.getProfile();
+          
+          if (profileResponse.success && profileResponse.data) {
+            if (userType === 'restaurant') {
+              profileData = { ...userData, restaurant: profileResponse.data.restaurant || userData.restaurant };
+              if (profileResponse.data.restaurant?.id) {
+                localStorage.setItem('restaurant_id', profileResponse.data.restaurant.id);
+              }
+            } else {
+              profileData = { ...userData, user: profileResponse.data.user || userData };
+              if (profileResponse.data.user?.id) {
+                localStorage.setItem('registered_user_id', profileResponse.data.user.id);
+              }
+            }
+            
+            // Verificar role para superadmin
+            if (userType === 'superadmin' && (profileResponse.data.user?.role !== 'superadmin')) {
+              throw new Error('Acceso denegado para super admin');
+            }
           }
+        } catch (profileError) {
+          console.warn('No se pudo obtener perfil detallado:', profileError.message);
+          // Continuar con datos del login
+        }
+        
+        // Establecer ID del usuario después de normalización
+        if (userType === 'registered' || userType === 'superadmin') {
+          if (userData.id) {
+            localStorage.setItem('registered_user_id', userData.id);
+          }
+        } else if (userType === 'restaurant') {
+          if (userData.id) {
+            localStorage.setItem('restaurant_id', userData.id);
+          }
+        }
+        
+        setCurrentUser(userData);
+        setUserProfile(profileData);
+        setIsAuthenticated(true);
+        localStorage.setItem('musicmenu_user', JSON.stringify({ user: userData }));
+        localStorage.setItem('user_profile', JSON.stringify(profileData));
+        
+        if (userType === 'superadmin' || (userData.role === 'superadmin')) {
+          setAppMode('admin');
+          setCurrentStep('superadmin-panel');
+        } else if (userType === 'restaurant') {
+          setAppMode('admin');
+          setCurrentStep('restaurant-panel');
         } else {
           setCurrentStep('restaurant-selection');
         }
         setCurrentView('home');
       } else {
-        throw new Error(result.message || 'Error al iniciar sesión');
+        throw new Error(result?.message || 'Error al iniciar sesión');
       }
     } catch (error) {
       const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
       setAuthError(errorMessage);
-      throw new Error(errorMessage);
+      // No propagar el error para que Login.jsx no lo muestre si el login base succeeded
+      if (errorMessage.includes('perfil') || errorMessage.includes('profile')) {
+        console.warn('Login succeeded but profile failed:', errorMessage);
+        // No setAuthError para profile errors
+      } else {
+        setAuthError(errorMessage);
+      }
     }
   };
 

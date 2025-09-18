@@ -186,7 +186,7 @@ const Navbar = ({
                     <User className="h-4 w-4 text-white" />
                   </div>
                   <div className="hidden sm:block text-left">
-                    <p className="text-sm font-medium text-white">{user.name || user.email}</p>
+                    <p className="text-sm font-medium text-white">{user?.name || user?.email || 'Usuario'}</p>
                     <p className="text-xs text-slate-400">Mi cuenta</p>
                   </div>
                   <ChevronDown className="h-4 w-4" />

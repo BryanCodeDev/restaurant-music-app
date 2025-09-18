@@ -55,31 +55,17 @@ const Login = ({ onLogin, onSwitchToRegister, onSwitchToCustomer, isLoading, err
     setErrors({});
 
     try {
-      let response;
+      // Llamar al handler del padre en lugar de apiService directamente
       switch (userType) {
         case 'restaurant':
-          response = await apiService.loginRestaurant(formData.email, formData.password);
-          localStorage.setItem('user_type', 'restaurant');
+          await onLogin({ ...formData, userType: 'restaurant' });
           break;
         case 'superadmin':
-          response = await apiService.loginUser(formData.email, formData.password);
-          localStorage.setItem('user_type', 'superadmin');
-          // Verificar role en response
-          if (response.success && response.data?.role !== 'superadmin') {
-            throw new Error('Acceso denegado para super admin');
-          }
+          await onLogin({ ...formData, userType: 'superadmin' });
           break;
         default: // 'user'
-          response = await apiService.loginUser(formData.email, formData.password);
-          localStorage.setItem('user_type', 'registered');
+          await onLogin({ ...formData, userType: 'user' });
           break;
-      }
-
-      if (response.access_token || (response.success && response.data?.access_token)) {
-        // Token ya guardado en apiService
-        await onLogin(response);
-      } else {
-        throw new Error(response.message || 'Error en la autenticación');
       }
     } catch (error) {
       setErrors({ submit: error.message || 'Error al iniciar sesión' });
