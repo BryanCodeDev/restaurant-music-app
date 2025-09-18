@@ -32,7 +32,9 @@ CREATE TABLE restaurants (
   rating DECIMAL(3,2) DEFAULT 0.00,
   total_reviews INT DEFAULT 0,
   verified BOOLEAN DEFAULT false,
+  verification_token VARCHAR(255) NULL,
   verification_date TIMESTAMP NULL,
+  pending_approval BOOLEAN DEFAULT true,
   timezone VARCHAR(50) DEFAULT 'America/Bogota',
   max_requests_per_user INT DEFAULT 2,
   queue_limit INT DEFAULT 50,
@@ -71,6 +73,7 @@ CREATE TABLE registered_users (
   is_active BOOLEAN DEFAULT true,
   is_premium BOOLEAN DEFAULT false,
   email_verified BOOLEAN DEFAULT false,
+  verification_token VARCHAR(255) NULL,
   email_verified_at TIMESTAMP NULL,
   last_login_at TIMESTAMP NULL,
   login_count INT DEFAULT 0,
@@ -326,14 +329,15 @@ CREATE TABLE auth_tokens (
 -- ===============================
 
 -- Restaurante de prueba
-INSERT INTO restaurants (id, name, slug, email, password, city, country) VALUES 
-('rest-001', 'La Terraza Musical', 'la-terraza-musical', 'admin@laterraza.com', 'admin123', 'Bogotá', 'Colombia');
+-- Nota: En producción, hashea las contraseñas con bcrypt antes de insertar
+INSERT INTO restaurants (id, name, slug, email, password, city, country, verification_token, pending_approval) VALUES 
+('rest-001', 'La Terraza Musical', 'la-terraza-musical', 'admin@laterraza.com', 'admin123', 'Bogotá', 'Colombia', NULL, true);
 
 -- Usuarios registrados
-INSERT INTO registered_users (id, name, email, password, phone, preferred_genres, is_active) VALUES
-('reg-user-001', 'María González', 'maria@demo.com', 'demo123', '+57 300 123 4567', '["pop", "rock", "ballad"]', true),
-('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', 'demo123', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true),
-('reg-user-003', 'Ana Martínez', 'ana@demo.com', 'demo123', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true);
+INSERT INTO registered_users (id, name, email, password, phone, preferred_genres, is_active, verification_token) VALUES
+('reg-user-001', 'María González', 'maria@demo.com', 'demo123', '+57 300 123 4567', '["pop", "rock", "ballad"]', true, NULL),
+('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', 'demo123', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true, NULL),
+('reg-user-003', 'Ana Martínez', 'ana@demo.com', 'demo123', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true, NULL);
 
 -- Usuarios temporales (mesas)
 INSERT INTO users (id, restaurant_id, table_number, session_id, name, user_type) VALUES

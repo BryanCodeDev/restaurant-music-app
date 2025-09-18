@@ -47,8 +47,15 @@ class ApiService {
       }
       
       if (!response.ok) {
-        const error = responseData || { message: 'Request failed' };
-        throw new Error(error.message || `HTTP ${response.status}: ${response.statusText}`);
+        let errorMessage = responseData?.message || 'Request failed';
+        
+        // Manejo específico de errores de auth
+        if (response.status === 409) {
+          errorMessage = 'El email ya está registrado. ¿Iniciar sesión?';
+        }
+        
+        const error = { ...responseData, message: errorMessage };
+        throw new Error(errorMessage);
       }
 
       return responseData;
@@ -228,6 +235,32 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
+  // Admin methods for superadmin
+  async getPendingRestaurants() {
+    const response = await this.request('/admin/pending-restaurants');
+    return response.success ? response.data : response;
+  }
+
+  async approveRestaurant(id, data) {
+    const formData = new FormData();
+    if (data.plan) formData.append('plan', data.plan);
+    if (data.payment_proof) formData.append('payment_proof', data.payment_proof);
+    if (data.notes) formData.append('notes', data.notes);
+    const response = await this.request(`/admin/approve-restaurant/${id}`, {
+      method: 'PATCH',
+      body: formData
+    });
+    return response;
+  }
+
+  async rejectRestaurant(id, data) {
+    const response = await this.request(`/admin/reject-restaurant/${id}`, {
+      method: 'POST',
+      body: data // {reason_rejection}
+    });
+    return response;
+  }
+  
   // ===== RESTAURANTS =====
   
   async getPublicRestaurants(params = {}) {

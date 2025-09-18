@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Building2, 
   Mail, 
@@ -52,6 +52,84 @@ const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Superadmin states
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [pendingRestaurants, setPendingRestaurants] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [approveForm, setApproveForm] = useState({ plan: 'starter', notes: '' });
+  const [rejectReason, setRejectReason] = useState('');
+
+  useEffect(() => {
+    const userType = localStorage.getItem('user_type');
+    setIsSuperAdmin(userType === 'superadmin');
+    if (userType === 'superadmin') {
+      loadPendingRestaurants();
+    }
+  }, []);
+
+  const loadPendingRestaurants = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.getPendingRestaurants();
+      setPendingRestaurants(response || []);
+    } catch (error) {
+      console.error('Error loading pending restaurants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApprove = async (restaurantId) => {
+    setSelectedRestaurant(restaurantId);
+    setShowApproveModal(true);
+  };
+
+  const submitApprove = async () => {
+    if (!selectedRestaurant || !approveForm.plan) return;
+    setLoading(true);
+    try {
+      const data = new FormData();
+      data.append('plan', approveForm.plan);
+      if (approveForm.payment_proof) data.append('payment_proof', approveForm.payment_proof);
+      if (approveForm.notes) data.append('notes', approveForm.notes);
+      const response = await apiService.approveRestaurant(selectedRestaurant, data);
+      if (response.success) {
+        loadPendingRestaurants();
+        setShowApproveModal(false);
+        setApproveForm({ plan: 'starter', notes: '' });
+      }
+    } catch (error) {
+      console.error('Error approving restaurant:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReject = async (restaurantId) => {
+    setSelectedRestaurant(restaurantId);
+    setShowRejectModal(true);
+  };
+
+  const submitReject = async () => {
+    if (!selectedRestaurant || !rejectReason) return;
+    setLoading(true);
+    try {
+      const response = await apiService.rejectRestaurant(selectedRestaurant, { reason_rejection: rejectReason });
+      if (response.success) {
+        loadPendingRestaurants();
+        setShowRejectModal(false);
+        setRejectReason('');
+      }
+    } catch (error) {
+      console.error('Error rejecting restaurant:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const plans = [
     {
@@ -647,145 +725,290 @@ const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack
             </button>
           )}
 
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-xl opacity-20 blur"></div>
-                <div className="relative bg-gradient-to-br from-amber-500 to-yellow-600 p-4 rounded-xl">
-                  <Crown className="h-10 w-10 text-white" />
+          {/* Superadmin Dashboard Section */}
+          {isSuperAdmin && (
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-white mb-4">Panel Superadmin</h1>
+              <div className="bg-slate-800/40 border border-slate-700/50 rounded-3xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-white">Restaurantes Pendientes de Aprobación</h2>
+                  <button
+                    onClick={loadPendingRestaurants}
+                    disabled={loading}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg disabled:opacity-50"
+                  >
+                    {loading ? 'Cargando...' : 'Actualizar'}
+                  </button>
                 </div>
-              </div>
-            </div>
-            
-            <h1 className="text-3xl font-black bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent mb-2">
-              Registra tu Restaurante
-            </h1>
-            <p className="text-slate-400 mb-8">
-              Únete a la plataforma líder en experiencias musicales gastronómicas
-            </p>
-
-            {/* Progress Steps */}
-            <div className="flex items-center justify-center space-x-4 mb-8">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
-                    currentStep >= step 
-                      ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' 
-                      : 'bg-slate-700 text-slate-400'
-                  }`}>
-                    {step}
+                {loading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-amber-400" />
                   </div>
-                  {step < 3 && (
-                    <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
-                      currentStep > step ? 'bg-amber-500' : 'bg-slate-700'
-                    }`} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Form Container */}
-          <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8">
-            
-            {/* Step Content */}
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
-
-            {/* Submit Error */}
-            {errors.submit && (
-              <div className="mt-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                <p className="text-red-400 text-sm flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{errors.submit}</span>
-                </p>
-              </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex justify-between mt-8">
-              <button
-                onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : null}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                  currentStep > 1
-                    ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
-                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                }`}
-                disabled={currentStep === 1}
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span>Anterior</span>
-              </button>
-
-              <button
-                onClick={handleNext}
-                disabled={isLoading}
-                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-yellow-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Procesando...</span>
-                  </>
-                ) : currentStep === 3 ? (
-                  <>
-                    <Crown className="h-5 w-5" />
-                    <span>Completar Registro</span>
-                  </>
+                ) : pendingRestaurants.length === 0 ? (
+                  <p className="text-slate-400 text-center py-8">No hay restaurantes pendientes.</p>
                 ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="text-left p-3 font-semibold text-white">Restaurante</th>
+                          <th className="text-left p-3 font-semibold text-white">Email</th>
+                          <th className="text-left p-3 font-semibold text-white">Fecha Registro</th>
+                          <th className="text-left p-3 font-semibold text-white">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingRestaurants.map((restaurant) => (
+                          <tr key={restaurant.id} className="border-b border-slate-700/50">
+                            <td className="p-3 font-medium text-white">{restaurant.name}</td>
+                            <td className="p-3 text-slate-300">{restaurant.email}</td>
+                            <td className="p-3 text-slate-300">{new Date(restaurant.created_at).toLocaleDateString()}</td>
+                            <td className="p-3">
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleApprove(restaurant.id)}
+                                  className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm"
+                                >
+                                  Aprobar
+                                </button>
+                                <button
+                                  onClick={() => handleReject(restaurant.id)}
+                                  className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
+                                >
+                                  Rechazar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Approve Modal */}
+              {showApproveModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+                    <h3 className="text-lg font-semibold text-white mb-4">Aprobar Restaurante</h3>
+                    <div className="space-y-4">
+                      <select
+                        value={approveForm.plan}
+                        onChange={(e) => setApproveForm({...approveForm, plan: e.target.value})}
+                        className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                      >
+                        <option value="starter">Starter</option>
+                        <option value="professional">Professional</option>
+                        <option value="enterprise">Enterprise</option>
+                      </select>
+                      <input
+                        type="file"
+                        onChange={(e) => setApproveForm({...approveForm, payment_proof: e.target.files[0]})}
+                        className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
+                      />
+                      <textarea
+                        value={approveForm.notes}
+                        onChange={(e) => setApproveForm({...approveForm, notes: e.target.value})}
+                        placeholder="Notas (opcional)"
+                        className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white h-20"
+                      />
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => setShowApproveModal(false)}
+                          className="px-4 py-2 text-slate-400 hover:text-white"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={submitApprove}
+                          disabled={loading}
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
+                        >
+                          {loading ? 'Procesando...' : 'Aprobar'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Reject Modal */}
+              {showRejectModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full">
+                    <h3 className="text-lg font-semibold text-white mb-4">Rechazar Restaurante</h3>
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Razón del rechazo"
+                      className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white h-24 mb-4"
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => setShowRejectModal(false)}
+                        className="px-4 py-2 text-slate-400 hover:text-white"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={submitReject}
+                        disabled={loading || !rejectReason}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded disabled:opacity-50"
+                      >
+                        {loading ? 'Procesando...' : 'Rechazar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Registration Form for non-superadmin */}
+          {!isSuperAdmin && (
+            <>
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="flex justify-center mb-6">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-xl opacity-20 blur"></div>
+                    <div className="relative bg-gradient-to-br from-amber-500 to-yellow-600 p-4 rounded-xl">
+                      <Crown className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                <h1 className="text-3xl font-black bg-gradient-to-r from-amber-400 to-yellow-400 bg-clip-text text-transparent mb-2">
+                  Registra tu Restaurante
+                </h1>
+                <p className="text-slate-400 mb-8">
+                  Únete a la plataforma líder en experiencias musicales gastronómicas
+                </p>
+
+                {/* Progress Steps */}
+                <div className="flex items-center justify-center space-x-4 mb-8">
+                  {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
+                        currentStep >= step
+                          ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'
+                          : 'bg-slate-700 text-slate-400'
+                      }`}>
+                        {step}
+                      </div>
+                      {step < 3 && (
+                        <div className={`w-16 h-1 mx-2 transition-all duration-300 ${
+                          currentStep > step ? 'bg-amber-500' : 'bg-slate-700'
+                        }`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Form Container */}
+              <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8">
+                
+                {/* Step Content */}
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+
+                {/* Submit Error */}
+                {errors.submit && (
+                  <div className="mt-6 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                    <p className="text-red-400 text-sm flex items-center space-x-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{errors.submit}</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Navigation Buttons */}
+                <div className="flex justify-between mt-8">
+                  <button
+                    onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : null}
+                    className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                      currentStep > 1
+                        ? 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white'
+                        : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                    }`}
+                    disabled={currentStep === 1}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Anterior</span>
+                  </button>
+
+                  <button
+                    onClick={handleNext}
+                    disabled={isLoading}
+                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-xl font-semibold hover:from-amber-600 hover:to-yellow-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-amber-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Procesando...</span>
+                      </>
+                    ) : currentStep === 3 ? (
+                      <>
+                        <Crown className="h-5 w-5" />
+                        <span>Completar Registro</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{currentStep === 1 ? 'Continuar' : 'Finalizar'}</span>
+                        <ArrowRight className="h-5 w-5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="text-center mt-8 space-y-4">
+                <p className="text-slate-400 text-sm">
+                  ¿Ya tienes una cuenta?{' '}
+                  <button
+                    type="button"
+                    onClick={onSwitchToLogin}
+                    className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
+                  >
+                    Inicia sesión aquí
+                  </button>
+                </p>
+
+                {onSwitchToCustomer && (
                   <>
-                    <span>{currentStep === 1 ? 'Continuar' : 'Finalizar'}</span>
-                    <ArrowRight className="h-5 w-5" />
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-700"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-slate-900 text-slate-500">¿Eres cliente?</span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={onSwitchToCustomer}
+                      className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 text-blue-400 rounded-lg font-medium hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-purple-500/20 transition-all duration-300"
+                    >
+                      <Headphones className="h-4 w-4" />
+                      <span>Acceso de Cliente</span>
+                    </button>
                   </>
                 )}
-              </button>
-            </div>
-          </div>
 
-          {/* Footer */}
-          <div className="text-center mt-8 space-y-4">
-            <p className="text-slate-400 text-sm">
-              ¿Ya tienes una cuenta?{' '}
-              <button
-                type="button"
-                onClick={onSwitchToLogin}
-                className="text-amber-400 hover:text-amber-300 font-medium transition-colors"
-              >
-                Inicia sesión aquí
-              </button>
-            </p>
-
-            {onSwitchToCustomer && (
-              <>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-700"></div>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-slate-900 text-slate-500">¿Eres cliente?</span>
-                  </div>
+                <div className="pt-6 border-t border-slate-800">
+                  <p className="text-xs text-slate-500">
+                    Al registrar tu restaurante, aceptas nuestros términos de servicio empresarial.
+                    <br />Todos los datos están protegidos bajo estrictas medidas de seguridad.
+                  </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={onSwitchToCustomer}
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 text-blue-400 rounded-lg font-medium hover:bg-gradient-to-r hover:from-blue-500/20 hover:to-purple-500/20 transition-all duration-300"
-                >
-                  <Headphones className="h-4 w-4" />
-                  <span>Acceso de Cliente</span>
-                </button>
-              </>
-            )}
-
-            <div className="pt-6 border-t border-slate-800">
-              <p className="text-xs text-slate-500">
-                Al registrar tu restaurante, aceptas nuestros términos de servicio empresarial.
-                <br />Todos los datos están protegidos bajo estrictas medidas de seguridad.
-              </p>
-            </div>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

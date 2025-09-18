@@ -30,6 +30,11 @@ import apiService from './services/apiService';
 import { useRestaurantMusic } from './hooks/useRestaurantMusic';
 import SpotifyLogin from './components/music/SpotifyLogin';
 
+function ProtectedAdminRoute({ children }) {
+  const userType = localStorage.getItem('user_type');
+  return userType === 'superadmin' ? children : <Navigate to="/unauthorized" replace />;
+}
+
 function App() {
   // App State Management
   const [appMode, setAppMode] = useState(() => localStorage.getItem('appMode') || 'customer'); // 'customer', 'admin'

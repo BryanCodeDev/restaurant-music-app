@@ -199,6 +199,26 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!formData.email) {
+      setErrors({ submit: 'Email es requerido para reenviar' });
+      return;
+    }
+
+    try {
+      const response = await apiService.resendVerification(formData.email);
+      if (response.success) {
+        // Mostrar mensaje de éxito temporal
+        setErrors({ submit: 'Email de verificación reenviado exitosamente. Revisa tu bandeja.' });
+        setTimeout(() => setErrors({}), 5000);
+      } else {
+        throw new Error(response.message || 'Error al reenviar');
+      }
+    } catch (error) {
+      setErrors({ submit: error.message || 'Error al reenviar el email de verificación' });
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -715,12 +735,17 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   <AlertCircle className="h-4 w-4" />
                   <span>Verifica tu email para completar el registro. Te enviamos un enlace.</span>
                 </p>
+                {isRestaurant && (
+                  <p className="text-yellow-300 text-xs mt-1">
+                    Después de verificar, selecciona tu plan y sube el comprobante de pago para aprobación.
+                  </p>
+                )}
                 <button
                   type="button"
-                  onClick={handleSubmit}
+                  onClick={handleResendVerification}
                   className="mt-2 w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors"
                 >
-                  Reenviar email de verificación
+                  Reenviar verificación
                 </button>
               </div>
             )}
