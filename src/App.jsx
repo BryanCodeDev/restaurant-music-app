@@ -20,6 +20,9 @@ import AdminDashboard from './components/admin/AdminDashboard';
 import QueueManager from './components/admin/QueueManager';
 import MusicPlayer from './components/music/MusicPlayer';
 import UserLimitManager from './components/music/UserLimitManager';
+import EditProfile from './components/auth/EditProfile';
+import RestaurantDashboard from './components/restaurant/RestaurantDashboard';
+import SuperAdminDashboard from './components/admin/SuperAdminDashboard';
 
 // Auth Components
 import Login from './components/auth/Login';
@@ -41,6 +44,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState(() => localStorage.getItem('currentStep') || 'restaurant-selection');
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [adminUser, setAdminUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [previousStep, setPreviousStep] = useState(null);
   const [authError, setAuthError] = useState(null);
 
   // Global plan state
@@ -208,14 +213,27 @@ function App() {
   const handleUserLogin = async (credentials) => {
     setAuthError(null);
     try {
-      // Simular autenticación de usuario (reemplaza con tu API real)
-      const result = await apiService.loginUser(credentials);
+      const result = await apiService.loginUser(credentials.email, credentials.password);
       
       if (result.success && result.data) {
+        const profile = await apiService.getProfile();
         setCurrentUser(result.data);
+        setUserProfile(profile.data);
         setIsAuthenticated(true);
         localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
-        setCurrentView('home'); // Volver a home después del login
+        localStorage.setItem('user_profile', JSON.stringify(profile.data));
+        
+        if (profile.data.type === 'registered_user') {
+          if (profile.data.role === 'superadmin') {
+            setAppMode('admin');
+            setCurrentStep('superadmin-panel');
+          } else {
+            setCurrentStep('restaurant-selection');
+          }
+        } else {
+          setCurrentStep('restaurant-selection');
+        }
+        setCurrentView('home');
       } else {
         throw new Error(result.message || 'Error al iniciar sesión');
       }
@@ -258,9 +276,14 @@ function App() {
     setSelectedRestaurant(null);
   };
 
+  const handleEditProfile = () => {
+    setPreviousStep(currentStep);
+    setCurrentStep('edit-profile');
+  };
+
   const handleProfile = () => {
-    // Implementar vista de perfil
-    console.log('Mostrar perfil de usuario');
+    // Implementar vista de perfil, perhaps open edit
+    handleEditProfile();
   };
 
   const handleSettings = () => {
@@ -285,9 +308,11 @@ function App() {
       const result = await apiService.loginRestaurant(credentials.email, credentials.password);
       
       if (result.success && result.data) {
-        setAdminUser(result.data);
+        const profile = result.data; // For restaurant, data is profile
+        setAdminUser(profile);
+        setUserProfile(profile);
         setAppMode('admin');
-        setCurrentStep('admin-dashboard');
+        setCurrentStep('restaurant-panel');
       } else {
         throw new Error(result.message || 'Error al iniciar sesión');
       }
@@ -487,24 +512,28 @@ function App() {
 
         case 'login':
           return (
-            <Login 
-              onLogin={handleUserLogin}
-              onSwitchToRegister={() => setCurrentView('register')}
-              onSwitchToCustomer={() => setCurrentView('home')}
-              isLoading={false}
-              error={authError}
-            />
+            <div className="max-w-2xl mx-auto px-4 py-8">
+              <Login
+                onLogin={handleUserLogin}
+                onSwitchToRegister={() => setCurrentView('register')}
+                onSwitchToCustomer={() => setCurrentView('home')}
+                isLoading={false}
+                error={authError}
+              />
+            </div>
           );
 
         case 'register':
           return (
-            <Register 
-              onRegister={handleUserRegister}
-              onSwitchToLogin={() => setCurrentView('login')}
-              onSwitchToCustomer={() => setCurrentView('home')}
-              isLoading={false}
-              error={authError}
-            />
+            <div className="max-w-2xl mx-auto px-4 py-8">
+              <Register
+                onRegister={handleUserRegister}
+                onSwitchToLogin={() => setCurrentView('login')}
+                onSwitchToCustomer={() => setCurrentView('home')}
+                isLoading={false}
+                error={authError}
+              />
+            </div>
           );
 
         case 'browse':
@@ -577,6 +606,17 @@ function App() {
               restaurantSlug={selectedRestaurant.slug}
             />
           );
+        case 'edit-profile':
+          return (
+            <div className="max-w-2xl mx-auto px-4 py-8">
+              <EditProfile
+                userType={localStorage.getItem('user_type') || 'registered'}
+                profile={userProfile || currentUser}
+                onClose={() => setCurrentStep(previousStep || 'home')}
+                onUpdate={(updatedProfile) => setUserProfile(updatedProfile)}
+              />
+            </div>
+          );
         default:
           return (
             <HomePage
@@ -590,8 +630,8 @@ function App() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-        <Navbar 
-          currentView={currentView} 
+        <Navbar
+          currentView={currentView}
           onViewChange={setCurrentView}
           restaurant={selectedRestaurant}
           userTable={safeRestaurantMusic.userSession?.tableNumber}
@@ -602,6 +642,7 @@ function App() {
           onShowRegister={handleShowRegister}
           onLogout={handleUserLogout}
           onProfile={handleProfile}
+          onEditProfile={handleEditProfile}
           onSettings={handleSettings}
         />
         
@@ -701,15 +742,37 @@ function App() {
       switch(currentStep) {
         case 'admin-auth':
           return (
-            <AdminAuth 
+            <AdminAuth
               onLogin={handleAdminLogin}
               onRegister={handleAdminRegister}
               onSwitchToCustomer={switchToCustomerMode}
               error={authError}
             />
           );
-        case 'admin-dashboard':
-          return renderAdminDashboard();
+        case 'restaurant-panel':
+          return (
+            <RestaurantDashboard
+              restaurant={userProfile.restaurant || adminUser}
+              requests={restaurantMusic?.requests || []}
+              currentSong={currentSong}
+              onLogout={handleAdminLogout}
+              onPlayPause={handlePlayPause}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onVolumeChange={handleVolumeChange}
+              isPlaying={isPlaying}
+              volume={volume}
+              onEditProfile={handleEditProfile}
+            />
+          );
+        case 'superadmin-panel':
+          return (
+            <SuperAdminDashboard
+              profile={userProfile}
+              onLogout={handleUserLogout}
+              onEditProfile={handleEditProfile}
+            />
+          );
         default:
           return (
             <AdminAuth 

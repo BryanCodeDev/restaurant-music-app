@@ -262,36 +262,36 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
+    <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white p-4 md:p-6 lg:p-8">
+      <div className="w-full max-w-4xl mx-auto">
         
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-6">
+        <div className="text-center mb-6 md:mb-8">
+          <div className="flex justify-center mb-4 md:mb-6">
             <div className="relative">
               <div className={`absolute inset-0 bg-gradient-to-r ${
                 isRestaurant
                   ? 'from-orange-500 to-yellow-600'
                   : 'from-emerald-500 to-teal-600'
               } rounded-full opacity-20 blur-lg animate-pulse`}></div>
-              <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-4 rounded-full border border-slate-700/50">
+              <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-3 md:p-4 rounded-full border border-slate-700/50">
                 {isRestaurant ? (
-                  <Building2 className="h-12 w-12 text-orange-400" />
+                  <Building2 className="h-10 md:h-12 w-10 md:w-12 text-orange-400" />
                 ) : (
-                  <UserPlus className="h-12 w-12 text-emerald-400" />
+                  <UserPlus className="h-10 md:h-12 w-10 md:w-12 text-emerald-400" />
                 )}
               </div>
             </div>
           </div>
           
-          <h1 className={`text-3xl font-black bg-gradient-to-r ${
+          <h1 className={`text-2xl md:text-3xl font-black bg-gradient-to-r ${
             isRestaurant
               ? 'from-orange-400 to-yellow-400'
               : 'from-emerald-400 to-teal-400'
-          } bg-clip-text text-transparent mb-2`}>
+          } bg-clip-text text-transparent mb-1 md:mb-2`}>
             {isRestaurant ? 'Registra tu Restaurante' : 'Crear Cuenta'}
           </h1>
-          <p className="text-slate-300">
+          <p className="text-sm md:text-base text-slate-300">
             {isRestaurant
               ? 'Únete como establecimiento y gestiona la experiencia musical'
               : 'Únete y personaliza tu experiencia musical'
@@ -344,8 +344,8 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
         </div>
 
         {/* Form */}
-        <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 rounded-3xl p-4 md:p-6 lg:p-8">
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5 lg:space-y-6">
             
             {/* Campos específicos para Admin */}
             {isRestaurant && (
@@ -583,7 +583,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                       type="text"
                       value={formData.city}
                       onChange={(e) => handleInputChange('city', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200"
+                      className="w-full px-4 py-2.5 md:py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200"
                       placeholder="Bogotá"
                       disabled={isLoading}
                     />
@@ -596,7 +596,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                     <select
                       value={formData.cuisineType}
                       onChange={(e) => handleInputChange('cuisineType', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200"
+                      className="w-full px-4 py-2.5 md:py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200"
                       disabled={isLoading}
                     >
                       <option value="">Seleccionar tipo</option>
@@ -614,8 +614,8 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   <textarea
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 resize-none"
+                    rows={2}
+                    className="w-full px-4 py-2.5 md:py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 resize-none"
                     placeholder="Cuéntanos sobre tu restaurante, ambiente y especialidades..."
                     disabled={isLoading}
                   />
@@ -636,7 +636,7 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                       type="date"
                       value={formData.dateOfBirth}
                       onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                      className="w-full pl-12 pr-4 py-2.5 md:py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
                       disabled={isLoading}
                     />
                   </div>
@@ -647,23 +647,23 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
                   <label className="block text-sm font-medium text-slate-300 mb-3">
                     Géneros musicales favoritos
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                     {musicGenres.map(genre => (
                       <button
                         key={genre.id}
                         type="button"
                         onClick={() => handleGenreToggle(genre.id)}
-                        className={`flex items-center space-x-2 p-3 rounded-xl border transition-all duration-200 ${
+                        className={`flex items-center space-x-2 p-2.5 md:p-3 rounded-xl border transition-all duration-200 ${
                           formData.preferredGenres.includes(genre.id)
                             ? `${genre.color} bg-opacity-20 border-current text-white`
                             : 'bg-slate-700/30 border-slate-600 text-slate-300 hover:bg-slate-700/50 hover:border-slate-500'
                         }`}
                         disabled={isLoading}
                       >
-                        <div className={`w-3 h-3 rounded-full ${genre.color} ${
+                        <div className={`w-2.5 h-2.5 md:w-3 md:h-3 rounded-full ${genre.color} ${
                           formData.preferredGenres.includes(genre.id) ? 'opacity-100' : 'opacity-50'
                         }`}></div>
-                        <span className="text-sm font-medium">{genre.name}</span>
+                        <span className="text-xs md:text-sm font-medium">{genre.name}</span>
                       </button>
                     ))}
                   </div>
@@ -784,24 +784,24 @@ const Register = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, isLoading, 
             </button>
 
             {/* Features Info */}
-            <div className={`mt-6 p-4 ${
+            <div className={`mt-4 md:mt-6 p-3 md:p-4 ${
               isRestaurant
                 ? 'bg-orange-500/10 border-orange-500/30'
                 : 'bg-emerald-500/10 border-emerald-500/30'
             } border rounded-xl`}>
-              <div className="flex items-start space-x-3">
+              <div className="flex items-start space-x-2 md:space-x-3">
                 {isRestaurant ? (
-                  <Building2 className="h-5 w-5 text-orange-400 mt-0.5 flex-shrink-0" />
+                  <Building2 className="h-4 md:h-5 w-4 md:w-5 text-orange-400 mt-0.5 flex-shrink-0" />
                 ) : (
-                  <Heart className="h-5 w-5 text-red-400 mt-0.5 flex-shrink-0" />
+                  <Heart className="h-4 md:h-5 w-4 md:w-5 text-red-400 mt-0.5 flex-shrink-0" />
                 )}
                 <div>
-                  <h4 className={`font-semibold ${
+                  <h4 className={`font-semibold text-sm md:text-base ${
                     isRestaurant ? 'text-orange-400' : 'text-emerald-400'
-                  } mb-2`}>
+                  } mb-1.5 md:mb-2`}>
                     {isRestaurant ? 'Tu restaurante tendrá' : 'Con tu cuenta puedes'}
                   </h4>
-                  <ul className="text-sm text-slate-300 space-y-1">
+                  <ul className="text-xs md:text-sm text-slate-300 space-y-0.5 md:space-y-1">
                     {isRestaurant ? (
                       <>
                         <li>• Gestión completa de cola musical</li>

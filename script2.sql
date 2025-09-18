@@ -78,6 +78,7 @@ CREATE TABLE registered_users (
   last_login_at TIMESTAMP NULL,
   login_count INT DEFAULT 0,
   total_requests INT DEFAULT 0,
+  role ENUM('user', 'superadmin') DEFAULT 'user',
   favorite_restaurant_id VARCHAR(36),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -85,6 +86,7 @@ CREATE TABLE registered_users (
   INDEX idx_email (email),
   INDEX idx_active (is_active),
   INDEX idx_premium (is_premium),
+  INDEX idx_role (role),
   INDEX idx_created (created_at),
   INDEX idx_favorite_restaurant (favorite_restaurant_id)
 );
@@ -335,9 +337,10 @@ INSERT INTO restaurants (id, name, slug, email, password, city, country, verific
 
 -- Usuarios registrados
 INSERT INTO registered_users (id, name, email, password, phone, preferred_genres, is_active, verification_token) VALUES
-('reg-user-001', 'María González', 'maria@demo.com', 'demo123', '+57 300 123 4567', '["pop", "rock", "ballad"]', true, NULL),
-('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', 'demo123', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true, NULL),
-('reg-user-003', 'Ana Martínez', 'ana@demo.com', 'demo123', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true, NULL);
+('reg-user-001', 'María González', 'maria@demo.com', 'demo123', '+57 300 123 4567', '["pop", "rock", "ballad"]', true, NULL, 'user'),
+('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', 'demo123', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true, NULL, 'user'),
+('reg-user-003', 'Ana Martínez', 'ana@demo.com', 'demo123', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true, NULL, 'user'),
+('reg-user-004', 'Super Admin', 'super@admin.com', '$2a$12$examplehashedpasswordforadmin', NULL, NULL, true, NULL, 'superadmin');
 
 -- Usuarios temporales (mesas)
 INSERT INTO users (id, restaurant_id, table_number, session_id, name, user_type) VALUES

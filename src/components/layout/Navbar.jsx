@@ -17,9 +17,9 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-const Navbar = ({ 
-  currentView, 
-  onViewChange, 
+const Navbar = ({
+  currentView,
+  onViewChange,
   restaurant,
   userTable,
   onSwitchToAdmin,
@@ -30,6 +30,7 @@ const Navbar = ({
   onShowRegister, // Cambiará la vista a 'register'
   onLogout,
   onProfile,
+  onEditProfile,
   onSettings
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -214,6 +215,17 @@ const Navbar = ({
                       <div className="p-2">
                         <button
                           onClick={() => {
+                            onEditProfile?.();
+                            closeAllMenus();
+                          }}
+                          className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                        >
+                          <User className="h-5 w-5 text-blue-400" />
+                          <span className="text-slate-300 font-medium">Editar Perfil</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
                             onProfile?.();
                             closeAllMenus();
                           }}
@@ -370,7 +382,7 @@ const Navbar = ({
               onClick={toggleMobileMenu}
             />
             
-            <div className="fixed inset-x-0 top-16 mx-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50 lg:hidden animate-scale-in">
+            <div className="fixed inset-x-0 top-16 mx-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50 lg:hidden animate-scale-in overflow-y-auto max-h-[calc(100vh-8rem)]">
               {/* Restaurant Info - Mobile */}
               {restaurant && (
                 <div className="p-4 border-b border-slate-700/30">
@@ -444,6 +456,17 @@ const Navbar = ({
                           <span>{user.name || user.email}</span>
                         </div>
                       </div>
+                      
+                      <button
+                        onClick={() => {
+                          onEditProfile?.();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
+                      >
+                        <User className="h-5 w-5 text-blue-400" />
+                        <span className="text-slate-300 font-medium">Editar Perfil</span>
+                      </button>
                       
                       <button
                         onClick={() => {
@@ -534,8 +557,8 @@ const Navbar = ({
 
         {/* Bottom Navigation for Mobile - Alternative - Solo mostrar si no está en vistas de auth */}
         {!['login', 'register'].includes(currentView) && (
-          <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 md:hidden">
-            <div className="grid grid-cols-4 gap-1 p-2">
+          <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 md:hidden pb-4">
+            <div className="grid grid-cols-4 gap-1 p-2 mx-4">
               {navItems.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = currentView === item.id;
