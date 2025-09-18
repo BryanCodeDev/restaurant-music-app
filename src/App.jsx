@@ -244,19 +244,43 @@ function App() {
     }
   };
 
-  const handleUserRegister = async (data) => {
+  const handleUserRegister = async (responseData) => {
     setAuthError(null);
     try {
-      // Simular registro de usuario (reemplaza con tu API real)
-      const result = await apiService.registerUser(data);
+      let userData;
       
-      if (result.success && result.data) {
-        setCurrentUser(result.data);
-        setIsAuthenticated(true);
-        localStorage.setItem('musicmenu_user', JSON.stringify(result.data));
-        setCurrentView('home'); // Volver a home después del registro
+      if (responseData.success && responseData.data) {
+        userData = responseData.data;
+      } else if (responseData.user) {
+        userData = responseData.user;
       } else {
-        throw new Error(result.message || 'Error al registrar usuario');
+        throw new Error(responseData.message || 'Error al registrar usuario');
+      }
+      
+      setCurrentUser(userData);
+      setIsAuthenticated(true);
+      localStorage.setItem('musicmenu_user', JSON.stringify(userData));
+      setCurrentView('home'); // Volver a home después del registro
+      
+      // Fetch profile if needed for additional data
+      try {
+        const profile = await apiService.getProfile();
+        if (profile.success && profile.data) {
+          setUserProfile(profile.data);
+          localStorage.setItem('user_profile', JSON.stringify(profile.data));
+          
+          if (profile.data.role === 'superadmin') {
+            setAppMode('admin');
+            setCurrentStep('superadmin-panel');
+          } else {
+            setCurrentStep('restaurant-selection');
+          }
+        } else {
+          setCurrentStep('restaurant-selection');
+        }
+      } catch (profileError) {
+        console.warn('Could not fetch profile after registration:', profileError);
+        setCurrentStep('restaurant-selection');
       }
     } catch (error) {
       const errorMessage = error.message || 'Error al registrar el usuario';

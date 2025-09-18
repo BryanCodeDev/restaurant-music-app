@@ -336,11 +336,11 @@ INSERT INTO restaurants (id, name, slug, email, password, city, country, verific
 ('rest-001', 'La Terraza Musical', 'la-terraza-musical', 'admin@laterraza.com', 'admin123', 'Bogotá', 'Colombia', NULL, true);
 
 -- Usuarios registrados
-INSERT INTO registered_users (id, name, email, password, phone, preferred_genres, is_active, verification_token) VALUES
+INSERT INTO registered_users (id, name, email, password, phone, preferred_genres, is_active, verification_token, role) VALUES
 ('reg-user-001', 'María González', 'maria@demo.com', 'demo123', '+57 300 123 4567', '["pop", "rock", "ballad"]', true, NULL, 'user'),
 ('reg-user-002', 'Carlos Rodríguez', 'carlos@demo.com', 'demo123', '+57 300 765 4321', '["electronic", "hip-hop", "reggaeton"]', true, NULL, 'user'),
 ('reg-user-003', 'Ana Martínez', 'ana@demo.com', 'demo123', '+57 300 555 0123', '["jazz", "classical", "ballad"]', true, NULL, 'user'),
-('reg-user-004', 'Super Admin', 'super@admin.com', '$2a$12$examplehashedpasswordforadmin', NULL, NULL, true, NULL, 'superadmin');
+('reg-user-004', 'Super Admin', 'super@admin.com', '$2a$12$dUdVyxQvHAK6p4U05I8DA.YtXxe7LOnyPTAWv22.37kkwyE6B33y2', NULL, NULL, true, NULL, 'superadmin');
 
 -- Usuarios temporales (mesas)
 INSERT INTO users (id, restaurant_id, table_number, session_id, name, user_type) VALUES
