@@ -57,11 +57,11 @@ const PricingUpgrade = ({
 
         {/* Popular Plan Highlight */}
         {popularPlan && popularPlan.id !== currentPlan && (
-          <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-xl p-4">
+          <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-4">
             <div className="flex items-center space-x-3">
-              <Crown className="h-5 w-5 text-amber-400" />
+              <Crown className="h-5 w-5 text-purple-400" />
               <div>
-                <h5 className="font-semibold text-amber-400">Recomendado: {popularPlan.name}</h5>
+                <h5 className="font-semibold text-purple-400">Recomendado: {popularPlan.name}</h5>
                 <p className="text-sm text-slate-300">
                   La mayoría de restaurantes eligen este plan por su excelente relación calidad-precio.
                 </p>
@@ -94,13 +94,13 @@ const PricingUpgrade = ({
                 )}
 
                 <div className="text-center mb-4">
-                  <plan.icon className="h-8 w-8 text-amber-400 mx-auto mb-2" />
+                  <plan.icon className="h-8 w-8 text-purple-400 mx-auto mb-2" />
                   <h5 className="font-semibold text-white">{plan.name}</h5>
                   <p className="text-slate-400 text-sm">{plan.description}</p>
                 </div>
 
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-amber-400">
+                  <div className="text-2xl font-bold text-purple-400">
                     {plan.price}
                     <span className="text-sm text-slate-400">{plan.period}</span>
                   </div>
@@ -117,7 +117,7 @@ const PricingUpgrade = ({
 
                 <button
                   onClick={() => handleUpgrade(plan)}
-                  className="w-full py-2 px-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all duration-300"
+                  className="w-full py-2 px-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-blue-600 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/25"
                 >
                   {plan.buttonText}
                 </button>
@@ -128,11 +128,11 @@ const PricingUpgrade = ({
       </div>
 
       {/* Benefits */}
-      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+      <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-4">
         <div className="flex items-start space-x-3">
-          <Zap className="h-5 w-5 text-blue-400 mt-0.5" />
+          <Zap className="h-5 w-5 text-purple-400 mt-0.5" />
           <div>
-            <h4 className="font-semibold text-blue-400 mb-1">¿Por qué actualizar?</h4>
+            <h4 className="font-semibold text-purple-400 mb-1">¿Por qué actualizar?</h4>
             <ul className="text-sm text-slate-300 space-y-1">
               <li>• Más peticiones mensuales para tus clientes</li>
               <li>• Funcionalidades avanzadas de música</li>

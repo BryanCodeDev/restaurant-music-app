@@ -21,6 +21,7 @@ export const PRICING_PLANS = [
       'Sin API access'
     ],
     color: 'blue',
+    gradient: 'from-blue-500 to-blue-600',
     popular: false,
     icon: Star,
     buttonText: 'Comenzar con Starter'
@@ -42,7 +43,8 @@ export const PRICING_PLANS = [
       'Control de contenido'
     ],
     limitations: [],
-    color: 'amber',
+    color: 'purple',
+    gradient: 'from-purple-500 to-purple-600',
     popular: true,
     icon: Crown,
     buttonText: 'Elegir Professional'
@@ -64,7 +66,8 @@ export const PRICING_PLANS = [
       'SLA garantizado'
     ],
     limitations: [],
-    color: 'purple',
+    color: 'indigo',
+    gradient: 'from-indigo-500 to-indigo-600',
     popular: false,
     icon: Zap,
     buttonText: 'Contactar Ventas'
@@ -120,14 +123,14 @@ const PricingCard = ({
     >
       <div className={`p-6 rounded-2xl border-2 transition-all duration-300 ${
         selected
-          ? `border-${plan.color}-500 bg-${plan.color}-500/10 shadow-lg shadow-${plan.color}-500/20`
+          ? `border-${plan.color}-500 bg-gradient-to-br from-${plan.color}-500/10 to-${plan.color}-600/10 shadow-lg shadow-${plan.color}-500/20`
           : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
       }`}>
 
         {/* Popular Badge */}
         {plan.popular && (
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-            <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1">
+            <span className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1 shadow-lg shadow-purple-500/25">
               <Crown className="h-3 w-3" />
               <span>MÁS POPULAR</span>
             </span>
@@ -137,7 +140,7 @@ const PricingCard = ({
         {/* Header */}
         <div className="text-center mb-6">
           <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3 ${
-            selected ? `bg-${plan.color}-500/20` : 'bg-slate-700'
+            selected ? `bg-gradient-to-br from-${plan.color}-500/20 to-${plan.color}-600/20` : 'bg-slate-700'
           }`}>
             <IconComponent className={`h-6 w-6 ${
               selected ? `text-${plan.color}-400` : 'text-slate-400'
@@ -190,7 +193,7 @@ const PricingCard = ({
             }}
             className={`w-full py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
               selected
-                ? `bg-gradient-to-r from-${plan.color}-500 to-${plan.color}-600 text-white hover:from-${plan.color}-600 hover:to-${plan.color}-700 shadow-lg shadow-${plan.color}-500/25`
+                ? `bg-gradient-to-r ${plan.gradient} text-white hover:opacity-90 shadow-lg shadow-${plan.color}-500/25 transform hover:scale-105`
                 : `bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white`
             }`}
           >
@@ -306,7 +309,7 @@ const PricingComparison = ({ onPlanSelect, className = '' }) => {
                   </div>
                   <button
                     onClick={() => onPlanSelect && onPlanSelect(plan.id)}
-                    className="w-full py-2 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+                    className={`w-full py-2 px-4 bg-gradient-to-r ${plan.gradient} hover:opacity-90 text-white rounded-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-${plan.color}-500/25`}
                   >
                     {plan.buttonText}
                   </button>
@@ -356,7 +359,7 @@ const SelectedPlanCard = ({ planId, onChange, className = '' }) => {
       </div>
 
       <div className="flex items-center space-x-4">
-        <div className={`w-12 h-12 rounded-xl bg-${plan.color}-500/20 flex items-center justify-center`}>
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br from-${plan.color}-500/20 to-${plan.color}-600/20 flex items-center justify-center`}>
           <plan.icon className={`h-6 w-6 text-${plan.color}-400`} />
         </div>
 

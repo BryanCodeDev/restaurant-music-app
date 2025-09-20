@@ -439,7 +439,7 @@ function App() {
           onSelectRestaurant={handleSelectRestaurant}
         />
 
-        <main className="min-h-screen pb-24">
+        <main className="min-h-screen">
           {renderCurrentView()}
         </main>
 

@@ -30,6 +30,9 @@ import EnhancedFooter from '../layout/EnhancedFooter';
 // Context
 import { useAuth } from '../../contexts/AuthContext';
 
+// Pricing Components
+import PricingPlans from '../common/PricingPlans';
+
 const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   // Auth Context
   const { selectedRestaurant, switchToAdminMode, switchToCustomerMode } = useAuth();
@@ -40,6 +43,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPlayingPreview, setCurrentPlayingPreview] = useState(null);
+  const [currentView, setCurrentView] = useState('home');
 
   // Navigation handlers
   const handleShowLogin = () => {
@@ -55,6 +59,28 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   const handleSelectRestaurant = () => {
     // Reset to restaurant selection
     switchToCustomerMode();
+  };
+
+  // Navigation handlers for navbar
+  const handleViewChange = (viewId) => {
+    setCurrentView(viewId);
+    console.log('View changed to:', viewId);
+  };
+
+  const handleLogout = () => {
+    console.log('Logout clicked');
+  };
+
+  const handleProfile = () => {
+    console.log('Profile clicked');
+  };
+
+  const handleEditProfile = () => {
+    console.log('Edit profile clicked');
+  };
+
+  const handleSettings = () => {
+    console.log('Settings clicked');
   };
 
   useEffect(() => {
@@ -162,17 +188,17 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
       {/* Navbar */}
       <EnhancedNavbar
-        currentView="home"
-        onViewChange={() => {}}
+        currentView={currentView}
+        onViewChange={handleViewChange}
         restaurant={selectedRestaurant}
         userTable="Selecciona tu restaurante"
         onSwitchToAdmin={onSwitchToAdmin}
         onShowLogin={handleShowLogin}
         onShowRegister={handleShowRegister}
-        onLogout={() => {}}
-        onProfile={() => {}}
-        onEditProfile={() => {}}
-        onSettings={() => {}}
+        onLogout={handleLogout}
+        onProfile={handleProfile}
+        onEditProfile={handleEditProfile}
+        onSettings={handleSettings}
         onSelectRestaurant={handleSelectRestaurant}
       />
 
@@ -201,92 +227,46 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         
-        {/* Hero Header */}
-        <div className="text-center mb-16 lg:mb-20 relative">
-          
-          {/* Main Logo Animation */}
-          <div className="flex justify-center mb-8 lg:mb-12">
+        {/* Hero Header - Compact */}
+        <div className="text-center mb-8 lg:mb-12 relative">
+
+          {/* Main Logo Animation - Smaller */}
+          <div className="flex justify-center mb-6">
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full opacity-30 blur-2xl animate-pulse group-hover:opacity-50 transition-opacity duration-500"></div>
-              <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-8 lg:p-10 rounded-full border border-slate-700/50 group-hover:border-blue-500/50 transition-all duration-500">
+              <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-6 lg:p-8 rounded-full border border-slate-700/50 group-hover:border-blue-500/50 transition-all duration-500">
                 <div className="relative">
-                  <Headphones className="h-20 w-20 sm:h-24 sm:w-24 text-blue-400 group-hover:text-purple-400 transition-colors duration-500" />
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center animate-pulse">
+                  <Headphones className="h-16 w-16 sm:h-20 sm:w-20 text-blue-400 group-hover:text-purple-400 transition-colors duration-500" />
+                  <div className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center animate-pulse">
                     <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          
-          {/* Dynamic Title */}
-          <div className="relative mb-8">
-            <h1 className="text-5xl sm:text-6xl lg:text-8xl font-black mb-6 leading-none">
+
+          {/* Dynamic Title - Smaller */}
+          <div className="relative mb-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3 leading-none">
               <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                MusicMenu
+                BryJu Sound
               </span>
             </h1>
-            <div className="flex items-center justify-center space-x-4 text-xl lg:text-2xl font-semibold text-slate-300">
-              <Sparkles className="h-6 w-6 text-yellow-400 animate-pulse" />
-              <span>Tu música, tu momento, tu elección</span>
-              <Sparkles className="h-6 w-6 text-yellow-400 animate-pulse" />
+            <div className="flex items-center justify-center space-x-3 text-base lg:text-lg font-semibold text-slate-300">
+              <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
+              <span>Elige tu restaurante y disfruta la música</span>
+              <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
             </div>
           </div>
-          
-          {/* Value Proposition */}
-          <div className="max-w-4xl mx-auto mb-12">
-            <p className="text-lg sm:text-xl lg:text-2xl text-slate-300 leading-relaxed mb-8">
-              Convierte cada comida en una experiencia única. Elige la banda sonora perfecta mientras disfrutas de los mejores sabores de la ciudad.
+
+          {/* Compact Value Proposition */}
+          <div className="max-w-2xl mx-auto mb-6">
+            <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
+              Selecciona tu restaurante favorito y toma el control de la música mientras disfrutas de tu comida.
             </p>
-            
-            {/* Feature Pills */}
-            <div className="flex flex-wrap justify-center gap-3 mb-8">
-              {[
-                { icon: Radio, text: 'Música en Vivo', color: 'from-blue-500 to-cyan-500' },
-                { icon: Mic2, text: 'Peticiones Instantáneas', color: 'from-purple-500 to-pink-500' },
-                { icon: Award, text: 'Experiencia Premium', color: 'from-yellow-500 to-orange-500' },
-              ].map((feature, index) => (
-                <div key={index} className={`flex items-center space-x-2 px-4 py-2 bg-gradient-to-r ${feature.color} bg-opacity-20 backdrop-blur-sm border border-white/10 rounded-full text-white text-sm font-medium`}>
-                  <feature.icon className="h-4 w-4" />
-                  <span>{feature.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats Bar - Using real data */}
-          <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mb-12">
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-black text-white mb-1">
-                {restaurants.length || '0'}
-              </div>
-              <div className="text-slate-400 text-sm">Restaurantes</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-black text-white mb-1">
-                {restaurants.reduce((sum, r) => sum + (r.totalSongs || 0), 0) || '10K+'}
-              </div>
-              <div className="text-slate-400 text-sm">Canciones</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-black text-white mb-1">24/7</div>
-              <div className="text-slate-400 text-sm">Disponible</div>
-            </div>
           </div>
         </div>
 
-        {/* Admin Access - More Prominent */}
-        <div className="flex justify-center mb-12">
-          <button
-            onClick={onSwitchToAdmin}
-            className="group flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 text-white rounded-2xl font-bold text-lg hover:from-yellow-600 hover:via-orange-600 hover:to-red-600 transition-all duration-500 transform hover:scale-110 hover:rotate-1 shadow-2xl shadow-yellow-500/25 relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <Crown className="h-6 w-6 relative z-10 group-hover:animate-bounce" />
-            <span className="relative z-10">Portal Administrador</span>
-            <Zap className="h-5 w-5 relative z-10 group-hover:animate-pulse" />
-          </button>
-        </div>
 
         {/* Enhanced Search Section */}
         <div className="mb-12 space-y-8">
@@ -365,13 +345,13 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           </div>
         )}
 
-        {/* Enhanced Restaurant Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        {/* Enhanced Restaurant Grid - More Compact */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {filteredRestaurants.map((restaurant, index) => (
             <div
               key={restaurant.id}
-              className="group relative bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-3xl overflow-hidden hover:bg-slate-800/60 transition-all duration-700 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer transform"
-              style={{ animationDelay: `${index * 0.15}s` }}
+              className="group relative bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden hover:bg-slate-800/60 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer transform"
+              style={{ animationDelay: `${index * 0.1}s` }}
               onClick={() => handleRestaurantSelect(restaurant)}
             >
               {/* Premium Badge */}
@@ -398,12 +378,12 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                 </div>
               </div>
 
-              {/* Cover Image */}
-              <div className="relative h-56 overflow-hidden">
-                <img 
-                  src={restaurant.coverImage} 
+              {/* Cover Image - Smaller */}
+              <div className="relative h-40 sm:h-48 overflow-hidden">
+                <img
+                  src={restaurant.coverImage}
                   alt={restaurant.name}
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                   onError={(e) => {
                     e.target.src = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=400&fit=crop&crop=center';
                   }}
@@ -451,19 +431,19 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                 </div>
               </div>
 
-              {/* Restaurant Info */}
-              <div className="p-6 space-y-5">
+              {/* Restaurant Info - More Compact */}
+              <div className="p-4 space-y-3">
                 
                 {/* Header */}
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="space-y-1">
-                        <h3 className="font-black text-xl text-white group-hover:text-blue-300 transition-colors line-clamp-1">
+                        <h3 className="font-bold text-lg text-white group-hover:text-blue-300 transition-colors line-clamp-1">
                           {restaurant.name}
                         </h3>
                         {restaurant.description && (
-                          <p className="text-slate-400 text-xs line-clamp-2">
+                          <p className="text-slate-400 text-xs line-clamp-1">
                             {restaurant.description}
                           </p>
                         )}
@@ -556,28 +536,28 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                   </div>
                 </div>
 
-                {/* Action Button */}
-                <button 
+                {/* Action Button - More Compact */}
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRestaurantSelect(restaurant);
                   }}
-                  className={`w-full flex items-center justify-center space-x-3 py-4 rounded-2xl font-bold text-sm transition-all duration-500 transform ${
+                  className={`w-full flex items-center justify-center space-x-2 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
                     restaurant.isActive
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 hover:scale-105 shadow-lg shadow-blue-500/25'
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 hover:scale-105 shadow-md shadow-blue-500/25'
                       : 'bg-slate-700/50 text-slate-400 cursor-not-allowed'
                   }`}
                   disabled={!restaurant.isActive}
                 >
                   {restaurant.isActive ? (
                     <>
-                      <Headphones className="h-5 w-5" />
-                      <span>Conectar & Escuchar</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <Headphones className="h-4 w-4" />
+                      <span>Conectar</span>
+                      <ArrowRight className="h-3 w-3" />
                     </>
                   ) : (
                     <>
-                      <Clock className="h-5 w-5" />
+                      <Clock className="h-4 w-4" />
                       <span>{restaurant.hours}</span>
                     </>
                   )}
@@ -635,50 +615,25 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           </div>
         )}
 
-        {/* Bottom CTA Section */}
-        {filteredRestaurants.length > 0 && (
-          <div className="text-center mt-20 py-16 bg-gradient-to-r from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-3xl">
-            <div className="max-w-3xl mx-auto px-6">
-              <div className="flex justify-center mb-6">
-                <div className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-full">
-                  <Sparkles className="h-5 w-5 text-blue-400" />
-                  <span className="text-blue-300 font-semibold">Próximamente</span>
-                </div>
-              </div>
-              
-              <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4">
-                ¿Tienes un restaurante?
-              </h3>
-              <p className="text-slate-300 text-lg mb-8 leading-relaxed">
-                Únete a la revolución musical gastronómica. Ofrece a tus clientes una experiencia única donde ellos eligen la música perfecta para acompañar sus comidas.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button 
-                  onClick={onSwitchToAdmin}
-                  className="flex items-center space-x-3 px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-bold text-lg hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 transform hover:scale-105 shadow-lg shadow-emerald-500/25"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span>Registra tu Restaurante</span>
-                </button>
-                
-                <div className="flex items-center space-x-2 text-slate-400 text-sm">
-                  <span>o</span>
-                  <button 
-                    onClick={onSwitchToAdmin}
-                    className="text-blue-400 hover:text-blue-300 transition-colors underline"
-                  >
-                    inicia sesión como administrador
-                  </button>
-                </div>
-              </div>
-            </div>
+        {/* Pricing Plans for Restaurants */}
+        <div className="mt-16 mb-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4">Planes para Restaurantes</h2>
+            <p className="text-slate-300 text-lg">Ofrece a tus clientes el control total de la música</p>
           </div>
-        )}
 
-        {/* Footer */}
-        <EnhancedFooter />
+          <div className="bg-gradient-to-r from-slate-800/30 to-slate-900/30 backdrop-blur-xl border border-slate-700/30 rounded-2xl p-6">
+            <PricingPlans
+              onPlanSelect={(planId) => console.log('Plan selected:', planId)}
+              showHeader={false}
+              className="mb-0"
+            />
+          </div>
+        </div>
       </main>
+
+      {/* Footer - Always at bottom */}
+      <EnhancedFooter />
     </div>
   );
 };
