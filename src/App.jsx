@@ -44,6 +44,23 @@ import StaticPageRouter from './components/common/StaticPageRouter';
 import CookieBanner from './components/common/CookieBanner';
 
 function App() {
+  // Auth Context - Must be called inside component
+  const {
+    selectedRestaurant,
+    selectRestaurant,
+    switchToAdminMode: switchToAdminModeContext,
+    switchToCustomerMode: switchToCustomerModeContext,
+    appMode,
+    currentStep,
+    user,
+    userType,
+    isAuthenticated,
+    login: handleUserLogin,
+    register: handleUserRegister,
+    logout: handleLogout,
+    setCurrentStep
+  } = useAuth();
+
   // Music App State
   const [currentView, setCurrentView] = useState(() => localStorage.getItem('currentView') || 'home');
   const [currentStaticPage, setCurrentStaticPage] = useState(null);
@@ -51,9 +68,19 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(() => parseInt(localStorage.getItem('volume')) || 75);
 
-  // Use the restaurant music hook - pass null when no restaurant selected
-  const { selectedRestaurant } = useAuth();
+  // Additional state variables
+  const [userProfile, setUserProfile] = useState(null);
+  const [authError, setAuthError] = useState(null);
+  const [previousStep, setPreviousStep] = useState(null);
+
+  // Restaurant music data
   const restaurantMusic = useRestaurantMusic(selectedRestaurant?.slug);
+
+  // Derived values
+  const currentUser = user;
+  const adminUser = user;
+  const planType = restaurantMusic?.planType || 'basic';
+  const spotifyConnected = restaurantMusic?.spotifyConnected || false;
 
   // Auto-update current song from requests
   useEffect(() => {
@@ -82,6 +109,7 @@ function App() {
   };
 
   const handleUserLogout = () => {
+    handleLogout();
     setCurrentView('home');
   };
 
@@ -117,11 +145,17 @@ function App() {
   const handleRestaurantSelect = async (restaurant) => {
     try {
       // Usar el contexto de autenticación para seleccionar restaurante
-      const { selectRestaurant } = useAuth();
       selectRestaurant(restaurant);
     } catch (error) {
       console.error('Error selecting restaurant:', error);
     }
+  };
+
+  // Handle restaurant change from navbar
+  const handleSelectRestaurant = () => {
+    // Reset to restaurant selection step
+    setCurrentStep('restaurant-selection');
+    setCurrentView('home');
   };
 
   // Music Control Handlers
@@ -213,13 +247,11 @@ function App() {
 
   // Switch Modes - Usando AuthContext
   const switchToAdminMode = () => {
-    const { switchToAdminMode: switchMode } = useAuth();
-    switchMode();
+    switchToAdminModeContext();
   };
 
   const switchToCustomerMode = () => {
-    const { switchToCustomerMode: switchMode } = useAuth();
-    switchMode();
+    switchToCustomerModeContext();
     setCurrentView('home');
   };
 
@@ -404,6 +436,7 @@ function App() {
           onProfile={handleProfile}
           onEditProfile={handleEditProfile}
           onSettings={handleSettings}
+          onSelectRestaurant={handleSelectRestaurant}
         />
 
         <main className="min-h-screen pb-24">
@@ -510,7 +543,6 @@ function App() {
 
   // Main App Render Logic - Usando AuthContext
   const renderApp = () => {
-    const { appMode, currentStep, user, userType } = useAuth();
 
     // Check if we should render a static page
     if (currentView === 'static-page' && currentStaticPage) {

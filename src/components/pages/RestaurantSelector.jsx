@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Search, 
-  Star, 
-  Music, 
-  Users, 
+import {
+  MapPin,
+  Search,
+  Star,
+  Music,
+  Users,
   Clock,
   Headphones,
   ArrowRight,
@@ -23,13 +23,39 @@ import {
 } from 'lucide-react';
 import apiService from '../../services/apiService';
 
+// Layout Components
+import EnhancedNavbar from '../layout/EnhancedNavbar';
+import EnhancedFooter from '../layout/EnhancedFooter';
+
+// Context
+import { useAuth } from '../../contexts/AuthContext';
+
 const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
+  // Auth Context
+  const { selectedRestaurant, switchToAdminMode, switchToCustomerMode } = useAuth();
+
   const [restaurants, setRestaurants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPlayingPreview, setCurrentPlayingPreview] = useState(null);
+
+  // Navigation handlers
+  const handleShowLogin = () => {
+    // This will be handled by the navbar
+    console.log('Show login');
+  };
+
+  const handleShowRegister = () => {
+    // This will be handled by the navbar
+    console.log('Show register');
+  };
+
+  const handleSelectRestaurant = () => {
+    // Reset to restaurant selection
+    switchToCustomerMode();
+  };
 
   useEffect(() => {
     loadRestaurants();
@@ -133,7 +159,23 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden">
-      
+
+      {/* Navbar */}
+      <EnhancedNavbar
+        currentView="home"
+        onViewChange={() => {}}
+        restaurant={selectedRestaurant}
+        userTable="Selecciona tu restaurante"
+        onSwitchToAdmin={onSwitchToAdmin}
+        onShowLogin={handleShowLogin}
+        onShowRegister={handleShowRegister}
+        onLogout={() => {}}
+        onProfile={() => {}}
+        onEditProfile={() => {}}
+        onSettings={() => {}}
+        onSelectRestaurant={handleSelectRestaurant}
+      />
+
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
@@ -144,10 +186,10 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
       {/* Floating Music Notes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(8)].map((_, i) => (
-          <div key={i} 
-               className="absolute text-blue-300/20 animate-bounce" 
-               style={{ 
-                 left: `${Math.random() * 100}%`, 
+          <div key={i}
+               className="absolute text-blue-300/20 animate-bounce"
+               style={{
+                 left: `${Math.random() * 100}%`,
                  top: `${Math.random() * 100}%`,
                  animationDelay: `${Math.random() * 4}s`,
                  animationDuration: `${3 + Math.random() * 2}s`
@@ -156,8 +198,8 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           </div>
         ))}
       </div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         
         {/* Hero Header */}
         <div className="text-center mb-16 lg:mb-20 relative">
@@ -633,7 +675,10 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
             </div>
           </div>
         )}
-      </div>
+
+        {/* Footer */}
+        <EnhancedFooter />
+      </main>
     </div>
   );
 };

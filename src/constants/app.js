@@ -40,7 +40,7 @@ export const STORAGE_KEYS = {
 };
 
 export const API_ENDPOINTS = {
-  BASE_URL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
   AUTH: '/auth',
   RESTAURANTS: '/restaurants',
   REQUESTS: '/requests',
@@ -49,8 +49,8 @@ export const API_ENDPOINTS = {
 };
 
 export const SPOTIFY_CONFIG = {
-  CLIENT_ID: process.env.REACT_APP_SPOTIFY_CLIENT_ID,
-  REDIRECT_URI: process.env.REACT_APP_SPOTIFY_REDIRECT_URI || window.location.origin + '/spotify/callback',
+  CLIENT_ID: import.meta.env.VITE_SPOTIFY_CLIENT_ID,
+  REDIRECT_URI: import.meta.env.VITE_SPOTIFY_REDIRECT_URI || window.location.origin + '/spotify/callback',
   SCOPES: [
     'streaming',
     'user-read-email',
