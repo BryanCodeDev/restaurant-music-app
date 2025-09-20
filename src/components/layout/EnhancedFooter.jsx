@@ -20,6 +20,7 @@ const EnhancedFooter = ({ restaurant, userTable }) => {
   const currentYear = new Date().getFullYear();
 
   return (
+    <>
     <footer className="bg-slate-900/50 backdrop-blur-sm border-t border-slate-700/50 mt-auto w-full">
       <div className="w-full py-12">
         <div className="max-w-7xl mx-auto w-full">
@@ -186,6 +187,7 @@ const EnhancedFooter = ({ restaurant, userTable }) => {
             <span className="text-gray-600">© {currentYear} BryJu Sound. Todos los derechos reservados.</span>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Back to Top Button */}
@@ -197,6 +199,7 @@ const EnhancedFooter = ({ restaurant, userTable }) => {
         <ArrowUp className="h-5 w-5" />
       </button>
     </footer>
+    </>
   );
 };
 
