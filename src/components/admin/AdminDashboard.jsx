@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
+import {
+  Building2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
   ArrowRight,
   AlertCircle,
   Headphones,
@@ -15,14 +15,11 @@ import {
   Upload,
   CheckCircle,
   ArrowLeft,
-  Zap,
-  Star,
   Shield,
   Calendar,
-  CreditCard,
-  Check,
-  X
+  Loader2
 } from 'lucide-react';
+import PricingPlans, { usePricingPlans } from '../common/PricingPlans';
 
 const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack, isLoading = false, error = null }) => {
   const [currentStep, setCurrentStep] = useState(1); // 1: Datos básicos, 2: Plan, 3: Verificación
@@ -131,68 +128,8 @@ const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack
     }
   };
 
-  const plans = [
-    {
-      id: 'starter',
-      name: 'Starter',
-      price: '$29',
-      period: '/mes',
-      description: 'Perfecto para comenzar',
-      features: [
-        'Hasta 50 mesas',
-        'Cola musical básica',
-        '1,000 peticiones/mes',
-        'Soporte por email',
-        'Estadísticas básicas'
-      ],
-      limitations: [
-        'Sin personalización avanzada',
-        'Sin API access'
-      ],
-      color: 'blue',
-      popular: false
-    },
-    {
-      id: 'professional',
-      name: 'Professional',
-      price: '$79',
-      period: '/mes',
-      description: 'Ideal para restaurantes establecidos',
-      features: [
-        'Mesas ilimitadas',
-        'Cola musical avanzada',
-        '10,000 peticiones/mes',
-        'Soporte prioritario 24/7',
-        'Analytics completos',
-        'Personalización completa',
-        'Integración con Spotify',
-        'Control de contenido'
-      ],
-      limitations: [],
-      color: 'amber',
-      popular: true
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: '$199',
-      period: '/mes',
-      description: 'Para cadenas y grandes establecimientos',
-      features: [
-        'Todo lo de Professional',
-        'Múltiples ubicaciones',
-        'Peticiones ilimitadas',
-        'Soporte dedicado',
-        'API completa',
-        'White-label',
-        'Integración personalizada',
-        'SLA garantizado'
-      ],
-      limitations: [],
-      color: 'purple',
-      popular: false
-    }
-  ];
+  // Usar el hook de planes de precios
+  const { getPlanById } = usePricingPlans();
 
   const validateStep1 = () => {
     const newErrors = {};
@@ -495,88 +432,13 @@ const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack
   );
 
   const renderStep2 = () => (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-xl font-bold text-white mb-2">Elige tu Plan</h3>
-        <p className="text-slate-400">Selecciona el plan que mejor se adapte a tu restaurante</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            onClick={() => handleInputChange('selectedPlan', plan.id)}
-            className={`relative cursor-pointer transition-all duration-300 transform hover:scale-105 ${
-              formData.selectedPlan === plan.id ? 'scale-105' : ''
-            }`}
-          >
-            <div className={`p-6 rounded-2xl border-2 transition-all duration-300 ${
-              formData.selectedPlan === plan.id
-                ? `border-${plan.color}-500 bg-${plan.color}-500/10 shadow-lg shadow-${plan.color}-500/20`
-                : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-            }`}>
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                    MÁS POPULAR
-                  </span>
-                </div>
-              )}
-
-              <div className="text-center mb-6">
-                <h4 className={`text-xl font-bold mb-1 ${
-                  formData.selectedPlan === plan.id ? `text-${plan.color}-400` : 'text-white'
-                }`}>
-                  {plan.name}
-                </h4>
-                <p className="text-slate-400 text-sm mb-4">{plan.description}</p>
-                <div className="flex items-baseline justify-center space-x-1">
-                  <span className={`text-3xl font-black ${
-                    formData.selectedPlan === plan.id ? `text-${plan.color}-400` : 'text-white'
-                  }`}>
-                    {plan.price}
-                  </span>
-                  <span className="text-slate-400">{plan.period}</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {plan.features.map((feature, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <Check className={`h-4 w-4 ${
-                      formData.selectedPlan === plan.id ? `text-${plan.color}-400` : 'text-emerald-400'
-                    }`} />
-                    <span className="text-sm text-slate-300">{feature}</span>
-                  </div>
-                ))}
-                {plan.limitations.map((limitation, index) => (
-                  <div key={index} className="flex items-center space-x-3 opacity-60">
-                    <X className="h-4 w-4 text-red-400" />
-                    <span className="text-sm text-slate-400">{limitation}</span>
-                  </div>
-                ))}
-              </div>
-
-              {formData.selectedPlan === plan.id && (
-                <div className="absolute inset-0 rounded-2xl border-2 border-amber-500 bg-amber-500/5 pointer-events-none" />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
-        <div className="flex items-start space-x-3">
-          <Shield className="h-5 w-5 text-amber-400 mt-0.5" />
-          <div>
-            <h4 className="font-semibold text-white mb-1">Garantía de 30 días</h4>
-            <p className="text-sm text-slate-400">
-              Si no estás satisfecho con el servicio, te devolvemos el 100% de tu dinero en los primeros 30 días.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <PricingPlans
+      selectedPlan={formData.selectedPlan}
+      onPlanSelect={(planId) => handleInputChange('selectedPlan', planId)}
+      layout="grid"
+      showHeader={true}
+      showGuarantee={true}
+    />
   );
 
   const renderStep3 = () => (
@@ -601,7 +463,7 @@ const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack
           <div className="flex justify-between">
             <span className="text-slate-400">Plan seleccionado:</span>
             <span className="text-amber-400 font-medium">
-              {plans.find(p => p.id === formData.selectedPlan)?.name} - {plans.find(p => p.id === formData.selectedPlan)?.price}/mes
+              {getPlanById(formData.selectedPlan)?.name} - {getPlanById(formData.selectedPlan)?.price}/mes
             </span>
           </div>
           <div className="flex justify-between">

@@ -3,27 +3,68 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Aplicación interactiva para peticiones musicales en restaurantes. Pide tus canciones favoritas y crea el ambiente perfecto." />
-    <meta name="keywords" content="música, restaurante, peticiones, playlist, ambiente, entretenimiento" />
-    <meta name="author" content="Restaurant Music App" />
-    
+    <meta name="description" content="BryJu Sound - Plataforma líder de música interactiva para restaurantes en Colombia. Permite a tus clientes solicitar canciones en tiempo real y crear experiencias musicales únicas. ¡Transforma tu restaurante!" />
+    <meta name="keywords" content="música restaurantes colombia, peticiones musicales, playlist interactiva, ambiente restaurante, música en vivo, jukebox digital, spotify restaurantes, sound system restaurante, música para negocios colombia" />
+    <meta name="author" content="BryJu Sound - Bryan Muñoz" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Spanish" />
+    <meta name="geo.region" content="CO" />
+    <meta name="geo.country" content="Colombia" />
+    <meta name="geo.placename" content="Bogotá, Medellín, Cali, Barranquilla" />
+
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="MusicMenu - Peticiones Musicales Interactivas" />
-    <meta property="og:description" content="La forma más interactiva de disfrutar la música en tu restaurante favorito" />
+    <meta property="og:title" content="BryJu Sound - Música Interactiva para Restaurantes en Colombia" />
+    <meta property="og:description" content="La plataforma #1 de música interactiva para restaurantes. Tus clientes piden canciones en tiempo real. ¡Prueba gratis!" />
     <meta property="og:type" content="website" />
-    
+    <meta property="og:locale" content="es_CO" />
+    <meta property="og:site_name" content="BryJu Sound" />
+
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="MusicMenu - Peticiones Musicales" />
-    <meta name="twitter:description" content="Pide tus canciones favoritas y crea el ambiente perfecto" />
+    <meta name="twitter:title" content="BryJu Sound - Música Interactiva para Restaurantes" />
+    <meta name="twitter:description" content="Transforma tu restaurante con música interactiva. Tus clientes eligen las canciones en tiempo real." />
+    <meta name="twitter:site" content="@bryjusound" />
+    <meta name="twitter:creator" content="@bryanmunoz" />
+
+    <!-- Additional SEO Meta Tags -->
+    <meta name="theme-color" content="#8b5cf6" />
+    <meta name="msapplication-TileColor" content="#8b5cf6" />
+    <meta name="application-name" content="BryJu Sound" />
+
+    <!-- Schema.org structured data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "BryJu Sound",
+      "description": "Plataforma de música interactiva para restaurantes en Colombia",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "80000",
+        "priceCurrency": "COP",
+        "priceValidUntil": "2025-12-31"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Bryan Muñoz"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "MasterCode Company"
+      }
+    }
+    </script>
     
     <!-- Preload critical fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <title>MusicMenu - Peticiones Musicales Interactivas</title>
+    <title>BryJu Sound - Música Interactiva para Restaurantes en Colombia</title>
     
     <!-- Inline critical CSS para mejor performance -->
     <style>
@@ -122,7 +163,7 @@
     <!-- Loading screen inicial -->
     <div class="initial-loading">
       <div class="loading-spinner"></div>
-      <div class="loading-text">Cargando MusicMenu...</div>
+      <div class="loading-text">Cargando BryJu Sound...</div>
     </div>
     
     <!-- React app container -->

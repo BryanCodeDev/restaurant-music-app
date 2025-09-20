@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://bryjusound.com/sitemap.xml
+
+# Bloquear archivos de desarrollo
+Disallow: /src/
+Disallow: /node_modules/
+Disallow: *.log
+Disallow: /dist/
+Disallow: /build/
+
+# Permitir archivos importantes
+Allow: /index.html
+Allow: /manifest.json
+Allow: /favicon.ico
+
+# Crawl delay para ser amigables
+Crawl-delay: 1

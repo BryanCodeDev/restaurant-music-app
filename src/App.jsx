@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 // Layout Components
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
+import EnhancedNavbar from './components/layout/EnhancedNavbar';
+import EnhancedFooter from './components/layout/EnhancedFooter';
 
 // Page Components
 import HomePage from './components/pages/HomePage';
@@ -33,413 +33,95 @@ import apiService from './services/apiService';
 import { useRestaurantMusic } from './hooks/useRestaurantMusic';
 import SpotifyLogin from './components/music/SpotifyLogin';
 
-function ProtectedAdminRoute({ children }) {
-  const userType = localStorage.getItem('user_type');
-  return userType === 'superadmin' ? children : <Navigate to="/unauthorized" replace />;
-}
+// Context
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import routeUtils from './utils/routeUtils';
+
+// Static Pages
+import StaticPageRouter from './components/common/StaticPageRouter';
+
+// Legal Components
+import CookieBanner from './components/common/CookieBanner';
 
 function App() {
-  // App State Management
-  const [appMode, setAppMode] = useState(() => localStorage.getItem('appMode') || 'customer'); // 'customer', 'admin'
-  const [currentStep, setCurrentStep] = useState(() => localStorage.getItem('currentStep') || 'restaurant-selection');
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [adminUser, setAdminUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [previousStep, setPreviousStep] = useState(null);
-  const [authError, setAuthError] = useState(null);
-
-  // Global plan state
-  const [planType, setPlanType] = useState('basic');
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
-  
-  // User Authentication State - SIN MODALES
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
   // Music App State
   const [currentView, setCurrentView] = useState(() => localStorage.getItem('currentView') || 'home');
+  const [currentStaticPage, setCurrentStaticPage] = useState(null);
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(() => parseInt(localStorage.getItem('volume')) || 75);
 
   // Use the restaurant music hook - pass null when no restaurant selected
+  const { selectedRestaurant } = useAuth();
   const restaurantMusic = useRestaurantMusic(selectedRestaurant?.slug);
-
-  // Initialize app on mount
-  useEffect(() => {
-    initializeApp();
-  }, []);
-
-  // Persist app state to localStorage
-  useEffect(() => {
-    localStorage.setItem('appMode', appMode);
-    localStorage.setItem('currentStep', currentStep);
-    localStorage.setItem('currentView', currentView);
-    if (selectedRestaurant?.slug) {
-      localStorage.setItem('selectedRestaurantSlug', selectedRestaurant.slug);
-    }
-    localStorage.setItem('volume', volume.toString());
-  }, [appMode, currentStep, currentView, selectedRestaurant, volume]);
-
-  // Restore selected restaurant if slug saved
-  useEffect(() => {
-    const savedSlug = localStorage.getItem('selectedRestaurantSlug');
-    if (savedSlug && !selectedRestaurant) {
-      const restoreRestaurant = async () => {
-        try {
-          const restaurant = await apiService.getRestaurantBySlug(savedSlug);
-          if (restaurant && restaurant.success) {
-            setSelectedRestaurant(restaurant.data);
-            setCurrentStep('music-app');
-          } else {
-            localStorage.removeItem('selectedRestaurantSlug');
-            setCurrentStep('restaurant-selection');
-          }
-        } catch (error) {
-          console.error('Failed to restore restaurant:', error);
-          localStorage.removeItem('selectedRestaurantSlug');
-          setCurrentStep('restaurant-selection');
-        }
-      };
-      restoreRestaurant();
-    }
-  }, [selectedRestaurant]);
-
-  // Guard against invalid state: if music-app but no restaurant, go to selection
-  useEffect(() => {
-    if (currentStep === 'music-app' && !selectedRestaurant) {
-      setCurrentStep('restaurant-selection');
-      localStorage.removeItem('selectedRestaurantSlug');
-    }
-  }, [currentStep, selectedRestaurant]);
 
   // Auto-update current song from requests
   useEffect(() => {
-    if (restaurantMusic?.requests && appMode === 'admin') {
+    if (restaurantMusic?.requests) {
       const playingRequest = restaurantMusic.requests.find(req => req.status === 'playing');
       if (playingRequest && (!currentSong || currentSong.id !== playingRequest.id)) {
         setCurrentSong(playingRequest);
         setIsPlaying(true);
       }
     }
+  }, [restaurantMusic?.requests, currentSong]);
 
-    // Update global plan state
-    if (restaurantMusic?.planType) {
-      setPlanType(restaurantMusic.planType);
-      setSpotifyConnected(restaurantMusic.spotifyConnected);
-    }
-  }, [restaurantMusic?.requests, appMode, currentSong, restaurantMusic?.planType, restaurantMusic?.spotifyConnected]);
+  // Persist music state to localStorage
+  useEffect(() => {
+    localStorage.setItem('currentView', currentView);
+    localStorage.setItem('volume', volume.toString());
+  }, [currentView, volume]);
 
-  const initializeApp = async () => {
-    try {
-      // Check for admin session
-      const adminToken = localStorage.getItem('admin_token');
-      if (adminToken) {
-        try {
-          const profile = await apiService.getProfile();
-          if (profile.success && profile.data) {
-            setAdminUser(profile.data);
-            setAppMode('admin');
-            setCurrentStep('admin-dashboard');
-            return;
-          }
-        } catch (error) {
-          localStorage.removeItem('admin_token');
-          console.log('Invalid admin token, cleared');
-        }
-      }
-
-      // Check for user session
-      const userSession = localStorage.getItem('musicmenu_user');
-      if (userSession) {
-        try {
-          const userData = JSON.parse(userSession);
-          setCurrentUser(userData);
-          setIsAuthenticated(true);
-        } catch (error) {
-          localStorage.removeItem('musicmenu_user');
-          console.log('Invalid user session, cleared');
-        }
-      }
-
-      // Check for customer session
-      const customerSession = apiService.getCurrentSession();
-      if (customerSession?.user) {
-        try {
-          // Try to validate session with backend
-          const restaurants = await apiService.getRestaurants();
-          const restaurant = restaurants.find(r => r.id === customerSession.user.restaurantId);
-          
-          if (restaurant) {
-            setSelectedRestaurant(restaurant);
-            setCurrentStep('music-app');
-            return;
-          }
-        } catch (error) {
-          apiService.clearSession();
-          console.log('Invalid customer session, cleared');
-        }
-      }
-
-      // Restore saved state if valid session/session invalid
-      const savedStep = localStorage.getItem('currentStep');
-      const savedView = localStorage.getItem('currentView');
-      if (savedStep && savedView) {
-        setCurrentStep(savedStep);
-        setCurrentView(savedView);
-      } else {
-        setCurrentStep('restaurant-selection');
-        setCurrentView('home');
-      }
-    } catch (error) {
-      console.error('App initialization error:', error);
-      setCurrentStep('restaurant-selection');
-    } finally {
-      // No loading state anymore
-    }
-  };
-
-  // User Authentication Handlers - SIN MODALES
+  // User Authentication Handlers - Usando AuthContext
   const handleShowLogin = () => {
     setCurrentView('login');
-    setAuthError(null);
   };
 
   const handleShowRegister = () => {
     setCurrentView('register');
-    setAuthError(null);
-  };
-
-  const handleUserLogin = async (credentials) => {
-    setAuthError(null);
-    try {
-      let result;
-      let userType = credentials.userType || 'user';
-      
-      switch (userType) {
-        case 'restaurant':
-          result = await apiService.loginRestaurant(credentials.email, credentials.password);
-          localStorage.setItem('user_type', 'restaurant');
-          break;
-        case 'superadmin':
-          result = await apiService.loginUser(credentials.email, credentials.password);
-          localStorage.setItem('user_type', 'superadmin');
-          break;
-        default: // 'user'
-          result = await apiService.loginUser(credentials.email, credentials.password);
-          localStorage.setItem('user_type', 'registered');
-          break;
-      }
-      
-      // Verificar éxito de forma flexible (backend podría no retornar 'success')
-      if (result && (result.success || result.access_token || result.user || result.data)) {
-        // Usar datos del login como base
-        let userData = result.data?.user || result.user || result.data || result;
-        
-        // Intentar obtener perfil adicional, pero no fallar si no se puede
-        let profileData = userData;
-        try {
-          const profileResponse = await apiService.getProfile();
-          
-          if (profileResponse.success && profileResponse.data) {
-            if (userType === 'restaurant') {
-              profileData = { ...userData, restaurant: profileResponse.data.restaurant || userData.restaurant };
-              if (profileResponse.data.restaurant?.id) {
-                localStorage.setItem('restaurant_id', profileResponse.data.restaurant.id);
-              }
-            } else {
-              profileData = { ...userData, user: profileResponse.data.user || userData };
-              if (profileResponse.data.user?.id) {
-                localStorage.setItem('registered_user_id', profileResponse.data.user.id);
-              }
-            }
-            
-            // Verificar role para superadmin
-            if (userType === 'superadmin' && (profileResponse.data.user?.role !== 'superadmin')) {
-              throw new Error('Acceso denegado para super admin');
-            }
-          }
-        } catch (profileError) {
-          console.warn('No se pudo obtener perfil detallado:', profileError.message);
-          // Continuar con datos del login
-        }
-        
-        // Establecer ID del usuario después de normalización
-        if (userType === 'registered' || userType === 'superadmin') {
-          if (userData.id) {
-            localStorage.setItem('registered_user_id', userData.id);
-          }
-        } else if (userType === 'restaurant') {
-          if (userData.id) {
-            localStorage.setItem('restaurant_id', userData.id);
-          }
-        }
-        
-        setCurrentUser(userData);
-        setUserProfile(profileData);
-        setIsAuthenticated(true);
-        localStorage.setItem('musicmenu_user', JSON.stringify({ user: userData }));
-        localStorage.setItem('user_profile', JSON.stringify(profileData));
-        
-        if (userType === 'superadmin' || (userData.role === 'superadmin')) {
-          setAppMode('admin');
-          setCurrentStep('superadmin-panel');
-        } else if (userType === 'restaurant') {
-          setAppMode('admin');
-          setCurrentStep('restaurant-panel');
-        } else {
-          setCurrentStep('restaurant-selection');
-        }
-        setCurrentView('home');
-      } else {
-        throw new Error(result?.message || 'Error al iniciar sesión');
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
-      setAuthError(errorMessage);
-      // No propagar el error para que Login.jsx no lo muestre si el login base succeeded
-      if (errorMessage.includes('perfil') || errorMessage.includes('profile')) {
-        console.warn('Login succeeded but profile failed:', errorMessage);
-        // No setAuthError para profile errors
-      } else {
-        setAuthError(errorMessage);
-      }
-    }
-  };
-
-  const handleUserRegister = async (responseData) => {
-    setAuthError(null);
-    try {
-      let userData;
-      
-      if (responseData.success && responseData.data) {
-        userData = responseData.data;
-      } else if (responseData.user) {
-        userData = responseData.user;
-      } else {
-        throw new Error(responseData.message || 'Error al registrar usuario');
-      }
-      
-      setCurrentUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem('musicmenu_user', JSON.stringify(userData));
-      setCurrentView('home'); // Volver a home después del registro
-      
-      // Fetch profile if needed for additional data
-      try {
-        const profile = await apiService.getProfile();
-        if (profile.success && profile.data) {
-          setUserProfile(profile.data);
-          localStorage.setItem('user_profile', JSON.stringify(profile.data));
-          
-          if (profile.data.role === 'superadmin') {
-            setAppMode('admin');
-            setCurrentStep('superadmin-panel');
-          } else {
-            setCurrentStep('restaurant-selection');
-          }
-        } else {
-          setCurrentStep('restaurant-selection');
-        }
-      } catch (profileError) {
-        console.warn('Could not fetch profile after registration:', profileError);
-        setCurrentStep('restaurant-selection');
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Error al registrar el usuario';
-      setAuthError(errorMessage);
-      throw new Error(errorMessage);
-    }
   };
 
   const handleUserLogout = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('musicmenu_user');
-    localStorage.removeItem('currentView');
-    localStorage.removeItem('selectedRestaurantSlug');
     setCurrentView('home');
-    setCurrentStep('restaurant-selection');
-    setSelectedRestaurant(null);
   };
 
   const handleEditProfile = () => {
-    setPreviousStep(currentStep);
-    setCurrentStep('edit-profile');
+    setCurrentView('edit-profile');
+  };
+
+  // Static Page Handlers
+  const handleShowPricing = () => {
+    setCurrentStaticPage('precios');
+    setCurrentView('static-page');
+  };
+
+  const handleShowFeatures = () => {
+    setCurrentStaticPage('caracteristicas');
+    setCurrentView('static-page');
+  };
+
+  const handleShowContact = () => {
+    setCurrentStaticPage('contacto');
+    setCurrentView('static-page');
   };
 
   const handleProfile = () => {
-    // Implementar vista de perfil, perhaps open edit
     handleEditProfile();
   };
 
   const handleSettings = () => {
-    // Implementar configuraciones de usuario
     console.log('Mostrar configuraciones');
   };
 
   // Restaurant Selection Handler
   const handleRestaurantSelect = async (restaurant) => {
     try {
-      setSelectedRestaurant(restaurant);
-      setCurrentStep('music-app');
+      // Usar el contexto de autenticación para seleccionar restaurante
+      const { selectRestaurant } = useAuth();
+      selectRestaurant(restaurant);
     } catch (error) {
       console.error('Error selecting restaurant:', error);
     }
-  };
-
-  // Admin Authentication Handlers
-  const handleAdminLogin = async (credentials) => {
-    setAuthError(null);
-    try {
-      const result = await apiService.loginRestaurant(credentials.email, credentials.password);
-      
-      if (result.success && result.data) {
-        const profile = result.data; // For restaurant, data is profile
-        setAdminUser(profile);
-        setUserProfile(profile);
-        setAppMode('admin');
-        setCurrentStep('restaurant-panel');
-      } else {
-        throw new Error(result.message || 'Error al iniciar sesión');
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
-      setAuthError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  };
-
-  const handleAdminRegister = async (data) => {
-    setAuthError(null);
-    try {
-      const result = await apiService.registerRestaurant(data);
-      
-      if (result.success && result.data) {
-        setAdminUser(result.data);
-        setAppMode('admin');
-        setCurrentStep('admin-dashboard');
-      } else {
-        throw new Error(result.message || 'Error al registrar restaurante');
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Error al registrar el restaurante';
-      setAuthError(errorMessage);
-      throw new Error(errorMessage);
-    }
-  };
-
-  const handleAdminLogout = () => {
-    apiService.clearSession();
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('currentView');
-    localStorage.removeItem('selectedRestaurantSlug');
-    setAdminUser(null);
-    setAppMode('customer');
-    setCurrentStep('restaurant-selection');
-    setSelectedRestaurant(null);
-    setCurrentSong(null);
-    setIsPlaying(false);
   };
 
   // Music Control Handlers
@@ -529,23 +211,16 @@ function App() {
     }
   };
 
-  // Switch Modes
+  // Switch Modes - Usando AuthContext
   const switchToAdminMode = () => {
-    setAuthError(null);
-    setAppMode('admin');
-    setCurrentStep('admin-auth');
+    const { switchToAdminMode: switchMode } = useAuth();
+    switchMode();
   };
 
   const switchToCustomerMode = () => {
-    apiService.clearSession();
-    localStorage.removeItem('admin_token');
-    setAppMode('customer');
-    setCurrentStep('restaurant-selection');
-    setSelectedRestaurant(null);
-    setAdminUser(null);
-    setCurrentSong(null);
-    setIsPlaying(false);
-    setAuthError(null);
+    const { switchToCustomerMode: switchMode } = useAuth();
+    switchMode();
+    setCurrentView('home');
   };
 
 
@@ -717,14 +392,12 @@ function App() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-        <Navbar
+        <EnhancedNavbar
           currentView={currentView}
           onViewChange={setCurrentView}
           restaurant={selectedRestaurant}
           userTable={safeRestaurantMusic.userSession?.tableNumber}
           onSwitchToAdmin={switchToAdminMode}
-          isAuthenticated={isAuthenticated}
-          user={currentUser}
           onShowLogin={handleShowLogin}
           onShowRegister={handleShowRegister}
           onLogout={handleUserLogout}
@@ -732,13 +405,13 @@ function App() {
           onEditProfile={handleEditProfile}
           onSettings={handleSettings}
         />
-        
+
         <main className="min-h-screen pb-24">
           {renderCurrentView()}
         </main>
-        
+
         {/* Spotify Login if Pro and not connected */}
-        {planType === 'pro' && !spotifyConnected && !['login', 'register'].includes(currentView) && selectedRestaurant && (
+        {restaurantMusic?.planType === 'pro' && !restaurantMusic?.spotifyConnected && !['login', 'register'].includes(currentView) && selectedRestaurant && (
           <SpotifyLogin
             restaurantId={selectedRestaurant.id}
             restaurantSlug={selectedRestaurant.slug}
@@ -746,14 +419,13 @@ function App() {
               // Refresh plan after connect
               const refreshPlan = async () => {
                 const updatedMusic = useRestaurantMusic(selectedRestaurant.slug);
-                setPlanType(updatedMusic.planType);
-                setSpotifyConnected(updatedMusic.spotifyConnected);
+                // El hook se actualizará automáticamente
               };
               refreshPlan();
             }}
           />
         )}
-      
+
         {/* Music Player - Solo mostrar si NO está en vistas de auth */}
         {currentSong && !['login', 'register'].includes(currentView) && (
           <MusicPlayer
@@ -767,17 +439,17 @@ function App() {
             onVolumeChange={handleVolumeChange}
             onToggleFavorite={safeRestaurantMusic.toggleFavorite}
             isFavorite={safeRestaurantMusic.favorites?.some(fav => fav.id === currentSong.id)}
-            planType={planType}
-            spotifyConnected={spotifyConnected}
+            planType={restaurantMusic?.planType || 'basic'}
+            spotifyConnected={restaurantMusic?.spotifyConnected || false}
             restaurantSlug={selectedRestaurant.slug}
           />
         )}
 
-        {/* Footer - Solo mostrar si NO está en vistas de auth */}
-        {!['login', 'register'].includes(currentView) && (
-          <Footer 
-            restaurant={selectedRestaurant} 
-            userTable={safeRestaurantMusic.userSession?.tableNumber} 
+        {/* Footer - Solo mostrar si NO está en vistas de auth y NO es página estática */}
+        {!['login', 'register'].includes(currentView) && currentView !== 'static-page' && (
+          <EnhancedFooter
+            restaurant={selectedRestaurant}
+            userTable={safeRestaurantMusic.userSession?.tableNumber}
           />
         )}
       </div>
@@ -823,26 +495,51 @@ function App() {
     );
   };
 
-  // Main App Render Logic
+  // Static Pages Router
+  const renderStaticPage = () => {
+    if (currentView === 'static-page' && currentStaticPage) {
+      return (
+        <div className="min-h-screen">
+          <StaticPageRouter currentPage={currentStaticPage} />
+          <EnhancedFooter />
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Main App Render Logic - Usando AuthContext
   const renderApp = () => {
+    const { appMode, currentStep, user, userType } = useAuth();
+
+    // Check if we should render a static page
+    if (currentView === 'static-page' && currentStaticPage) {
+      return renderStaticPage();
+    }
+
     if (appMode === 'admin') {
       switch(currentStep) {
         case 'admin-auth':
           return (
             <AdminAuth
-              onLogin={handleAdminLogin}
-              onRegister={handleAdminRegister}
+              onLogin={async (credentials) => {
+                const { login } = useAuth();
+                await login(credentials);
+              }}
+              onRegister={async (data) => {
+                const { register } = useAuth();
+                await register(data);
+              }}
               onSwitchToCustomer={switchToCustomerMode}
-              error={authError}
             />
           );
         case 'restaurant-panel':
           return (
             <RestaurantDashboard
-              restaurant={userProfile.restaurant || adminUser}
+              restaurant={user?.restaurant || user}
               requests={restaurantMusic?.requests || []}
               currentSong={currentSong}
-              onLogout={handleAdminLogout}
+              onLogout={handleUserLogout}
               onPlayPause={handlePlayPause}
               onNext={handleNext}
               onPrevious={handlePrevious}
@@ -855,18 +552,23 @@ function App() {
         case 'superadmin-panel':
           return (
             <SuperAdminDashboard
-              profile={userProfile}
+              profile={user}
               onLogout={handleUserLogout}
               onEditProfile={handleEditProfile}
             />
           );
         default:
           return (
-            <AdminAuth 
-              onLogin={handleAdminLogin}
-              onRegister={handleAdminRegister}
+            <AdminAuth
+              onLogin={async (credentials) => {
+                const { login } = useAuth();
+                await login(credentials);
+              }}
+              onRegister={async (data) => {
+                const { register } = useAuth();
+                await register(data);
+              }}
               onSwitchToCustomer={switchToCustomerMode}
-              error={authError}
             />
           );
       }
@@ -874,7 +576,7 @@ function App() {
       switch(currentStep) {
         case 'restaurant-selection':
           return (
-            <RestaurantSelector 
+            <RestaurantSelector
               onRestaurantSelect={handleRestaurantSelect}
               onSwitchToAdmin={switchToAdminMode}
             />
@@ -883,7 +585,7 @@ function App() {
           return renderMusicApp();
         default:
           return (
-            <RestaurantSelector 
+            <RestaurantSelector
               onRestaurantSelect={handleRestaurantSelect}
               onSwitchToAdmin={switchToAdminMode}
             />
@@ -908,7 +610,12 @@ function App() {
     </div>
   );
 
-  return renderApp();
+  return (
+    <AuthProvider>
+      {renderApp()}
+      <CookieBanner />
+    </AuthProvider>
+  );
 }
 
 export default App;

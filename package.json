@@ -1,9 +1,9 @@
 {
-  "name": "restaurant-music-app",
+  "name": "bryju-sound",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Aplicación interactiva para peticiones musicales en restaurantes",
+  "description": "BryJu Sound - La plataforma líder de música interactiva para restaurantes en Colombia. Permite a tus clientes solicitar canciones y crear experiencias musicales únicas.",
   "author": "Bryan Muñoz - MasterCode Company",
   "license": "MIT",
   "scripts": {
