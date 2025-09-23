@@ -348,15 +348,74 @@ CREATE TABLE auth_tokens (
   INDEX idx_token_type (token_type)
 );
 
+-- ============================
+-- NUEVAS TABLAS PARA SUSCRIPCIONES
+-- ============================
+
+-- Tabla para suscripciones de restaurantes
+CREATE TABLE restaurant_subscriptions (
+  id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  restaurant_id VARCHAR(36) NOT NULL,
+  plan_id VARCHAR(50) NOT NULL,
+  status ENUM('pending', 'approved', 'rejected', 'active', 'expired', 'cancelled') DEFAULT 'pending',
+  payment_method ENUM('qr', 'transfer') NOT NULL,
+  payment_proof VARCHAR(500),
+  rejection_reason TEXT,
+  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  approved_at TIMESTAMP NULL,
+  rejected_at TIMESTAMP NULL,
+  expires_at TIMESTAMP NULL,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  FOREIGN KEY (plan_id) REFERENCES subscription_plans(id) ON DELETE RESTRICT,
+  INDEX idx_restaurant_status (restaurant_id, status),
+  INDEX idx_status (status),
+  INDEX idx_submitted_at (submitted_at),
+  INDEX idx_expires_at (expires_at)
+);
+
+-- Tabla para logs de suscripciones
+CREATE TABLE subscription_logs (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  subscription_id VARCHAR(36) NOT NULL,
+  action ENUM('created', 'approved', 'rejected', 'activated', 'expired', 'cancelled') NOT NULL,
+  performed_by VARCHAR(36), -- user_id del admin que realizó la acción
+  details JSON,
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (subscription_id) REFERENCES restaurant_subscriptions(id) ON DELETE CASCADE,
+  INDEX idx_subscription_action (subscription_id, action),
+  INDEX idx_created_at (created_at)
+);
+
+-- Tabla para estadísticas de suscripciones
+CREATE TABLE subscription_stats (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  date DATE NOT NULL,
+  plan_id VARCHAR(50),
+  total_subscriptions INT DEFAULT 0,
+  approved_subscriptions INT DEFAULT 0,
+  rejected_subscriptions INT DEFAULT 0,
+  active_subscriptions INT DEFAULT 0,
+  revenue DECIMAL(10,2) DEFAULT 0.00,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_date_plan (date, plan_id),
+  INDEX idx_date (date),
+  INDEX idx_plan (plan_id)
+);
+
 -- ===============================
 -- INSERTAR DATOS DE PRUEBA
 -- ===============================
 
 -- Insertar planes de suscripción
-INSERT INTO subscription_plans (id, name, price, period, description, features, limitations, color, popular, max_requests, max_tables, has_spotify) VALUES
-('starter', 'Starter', 80000.00, 'mes', 'Perfecto para comenzar', JSON_ARRAY('Hasta 50 mesas', 'Cola musical básica', '1,000 peticiones/mes', 'Soporte por email', 'Estadísticas básicas'), JSON_ARRAY('Sin personalización avanzada', 'Sin API access'), 'blue', false, 1000, 50, false),
-('professional', 'Professional', 120000.00, 'mes', 'Ideal para restaurantes establecidos', JSON_ARRAY('Mesas ilimitadas', 'Cola musical avanzada', '10,000 peticiones/mes', 'Soporte prioritario 24/7', 'Analytics completos', 'Personalización completa', 'Integración con Spotify', 'Control de contenido'), JSON_ARRAY(), 'amber', true, 10000, null, true),
-('enterprise', 'Enterprise', 300000.00, 'mes', 'Para cadenas y grandes establecimientos', JSON_ARRAY('Todo lo de Professional', 'Múltiples ubicaciones', 'Peticiones ilimitadas', 'Soporte dedicado', 'API completa', 'White-label', 'Integración personalizada', 'SLA garantizado'), JSON_ARRAY(), 'purple', false, null, null, true);
+INSERT INTO subscription_plans (id, name, price, period, description, features, limitations, color, popular, max_requests, max_tables, has_spotify, is_active) VALUES
+('starter', 'Starter', 80000.00, 'mes', 'Perfecto para comenzar', JSON_ARRAY('Hasta 50 mesas', 'Cola musical básica', '1,000 peticiones/mes', 'Soporte por email', 'Estadísticas básicas'), JSON_ARRAY('Sin personalización avanzada', 'Sin API access'), 'blue', false, 1000, 50, false, true),
+('professional', 'Professional', 120000.00, 'mes', 'Ideal para restaurantes establecidos', JSON_ARRAY('Mesas ilimitadas', 'Cola musical avanzada', '10,000 peticiones/mes', 'Soporte prioritario 24/7', 'Analytics completos', 'Personalización completa', 'Integración con Spotify', 'Control de contenido'), JSON_ARRAY(), 'amber', true, 10000, null, true, true),
+('enterprise', 'Enterprise', 300000.00, 'mes', 'Para cadenas y grandes establecimientos', JSON_ARRAY('Todo lo de Professional', 'Múltiples ubicaciones', 'Peticiones ilimitadas', 'Soporte dedicado', 'API completa', 'White-label', 'Integración personalizada', 'SLA garantizado'), JSON_ARRAY(), 'purple', false, null, null, true, true);
 
 -- Restaurante de prueba
 -- Nota: En producción, hashea las contraseñas con bcrypt antes de insertar
@@ -395,6 +454,16 @@ INSERT INTO playlist_songs (id, playlist_id, song_id, position, added_by) VALUES
 -- Reviews
 INSERT INTO restaurant_reviews (id, restaurant_id, registered_user_id, rating, title, comment, music_quality_rating, service_rating, ambiance_rating) VALUES
 ('review-001', 'rest-001', 'reg-user-001', 5, 'Excelente experiencia musical', 'Gran ambiente y música', 5, 5, 5);
+
+-- Insertar datos de prueba para suscripciones
+INSERT INTO restaurant_subscriptions (
+  id, restaurant_id, plan_id, status, payment_method,
+  payment_proof, submitted_at, notes
+) VALUES (
+  'sub-001', 'rest-001', 'professional', 'pending', 'qr',
+  'https://example.com/payment-proof.jpg', NOW(),
+  'Suscripción inicial del restaurante de prueba'
+);
 
 -- ===============================
 -- VISTAS ÚTILES
