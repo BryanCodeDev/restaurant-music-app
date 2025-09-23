@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, BarChart3, AlertTriangle, CheckCircle, XCircle, Download, Edit3, LogOut } from 'lucide-react';
+import { Users, Building2, BarChart3, AlertTriangle, CheckCircle, XCircle, Download, Edit3, LogOut, Building } from 'lucide-react';
 import apiService from '../../services/apiService';
 import EditProfile from '../auth/EditProfile';
 
@@ -86,20 +86,36 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
 
   const handleBanUser = async (userId) => {
     try {
-      // Assume apiService.updateUser(userId, { isActive: false })
-      const response = await apiService.updateProfile({ isActive: false }); // Adjust for user ID
+      const user = users.find(u => u.id === userId);
+      const newStatus = !user.isActive;
+      const response = await apiService.updateUser(userId, { isActive: newStatus });
       if (response.success) {
         loadData();
+        setSelectedUser(null);
       } else {
-        setError('Ban failed: ' + response.message);
+        setError('User update failed: ' + response.message);
       }
     } catch (err) {
-      setError('Ban failed: ' + err.message);
+      setError('User update failed: ' + err.message);
+    }
+  };
+
+  const handleUpdateUser = async (userId, updates) => {
+    try {
+      const response = await apiService.updateUser(userId, updates);
+      if (response.success) {
+        loadData();
+        setSelectedUser(null);
+      } else {
+        setError('User update failed: ' + response.message);
+      }
+    } catch (err) {
+      setError('User update failed: ' + err.message);
     }
   };
 
   const tabs = [
-    { id: 'pending', label: 'Pending Restaurants', icon: Restaurant },
+    { id: 'pending', label: 'Pending Restaurants', icon: Building },
     { id: 'stats', label: 'Global Stats', icon: BarChart3 },
     { id: 'users', label: 'User Management', icon: Users }
   ];
@@ -169,7 +185,7 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
             {activeTab === 'pending' && (
               <div>
                 <h3 className="text-xl font-semibold mb-4 flex items-center space-x-2">
-                  <Restaurant className="h-5 w-5" />
+                  <Building className="h-5 w-5" />
                   <span>Pending Restaurants ({pendingRestaurants.length})</span>
                 </h3>
                 {pendingRestaurants.length === 0 ? (
@@ -236,7 +252,7 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
                                 className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
                               />
                               <button
-                                onClick={() => handleReject(rest.id, rejectReason)}
+                                onClick={() => handleReject(rest.id)}
                                 className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                               >
                                 <XCircle className="h-4 w-4" />
@@ -367,27 +383,43 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
                 <input
                   type="checkbox"
                   checked={selectedUser.isActive}
-                  onChange={() => handleBanUser(selectedUser.id)}
+                  onChange={() => {
+                    const updatedUser = {...selectedUser, isActive: !selectedUser.isActive};
+                    setSelectedUser(updatedUser);
+                    handleBanUser(selectedUser.id);
+                  }}
                   className="rounded text-green-500"
                 />
                 <span>Active</span>
               </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={selectedUser.role === 'superadmin'}
-                  disabled // Can't change role via UI
-                  className="rounded text-purple-500"
-                />
-                <span>Super Admin</span>
-              </label>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium">Role</label>
+                <select
+                  value={selectedUser.role}
+                  onChange={(e) => setSelectedUser({...selectedUser, role: e.target.value})}
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                >
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Super Admin</option>
+                </select>
+              </div>
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button
                 onClick={() => setSelectedUser(null)}
                 className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg"
               >
-                Close
+                Cancel
+              </button>
+              <button
+                onClick={() => handleUpdateUser(selectedUser.id, {
+                  isActive: selectedUser.isActive,
+                  role: selectedUser.role
+                })}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+              >
+                Save Changes
               </button>
             </div>
           </div>
