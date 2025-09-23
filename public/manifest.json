@@ -1,0 +1,20 @@
+{
+  "name": "BryJu Sound - Música Interactiva para Restaurantes",
+  "short_name": "BryJu Sound",
+  "description": "Plataforma líder de música interactiva para restaurantes en Colombia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "categories": ["music", "business", "entertainment"],
+  "lang": "es-CO",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
