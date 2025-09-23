@@ -30,7 +30,12 @@ export const ROUTES = {
 
   // Rutas especiales
   UNAUTHORIZED: '/unauthorized',
-  NOT_FOUND: '/404'
+  NOT_FOUND: '/404',
+
+  // Rutas de suscripción
+  PRICING: '/pricing',
+  SUBSCRIPTION: '/subscription',
+  PAYMENT_APPROVAL: '/admin/payment-approval'
 };
 
 // Configuración de navegación por tipo de usuario
@@ -41,7 +46,9 @@ export const NAVIGATION_CONFIG = {
       ROUTES.RESTAURANT_SELECTION,
       ROUTES.LOGIN,
       ROUTES.REGISTER,
-      ROUTES.ADMIN_AUTH
+      ROUTES.ADMIN_AUTH,
+      ROUTES.PRICING,
+      ROUTES.SUBSCRIPTION
     ],
     defaultRoute: ROUTES.RESTAURANT_SELECTION,
     showAuthButtons: true,
@@ -62,7 +69,9 @@ export const NAVIGATION_CONFIG = {
       ROUTES.EDIT_PROFILE,
       ROUTES.LOGIN,
       ROUTES.REGISTER,
-      ROUTES.ADMIN_AUTH
+      ROUTES.ADMIN_AUTH,
+      ROUTES.PRICING,
+      ROUTES.SUBSCRIPTION
     ],
     defaultRoute: ROUTES.RESTAURANT_SELECTION,
     showAuthButtons: false,
@@ -85,7 +94,8 @@ export const NAVIGATION_CONFIG = {
     allowedRoutes: [
       ROUTES.SUPERADMIN_PANEL,
       ROUTES.ADMIN_DASHBOARD,
-      ROUTES.ADMIN_AUTH
+      ROUTES.ADMIN_AUTH,
+      ROUTES.PAYMENT_APPROVAL
     ],
     defaultRoute: ROUTES.SUPERADMIN_PANEL,
     showAuthButtons: false,
@@ -109,13 +119,16 @@ export const APP_MODE_CONFIG = {
       ROUTES.EDIT_PROFILE,
       ROUTES.LOGIN,
       ROUTES.REGISTER,
-      ROUTES.ADMIN_AUTH
+      ROUTES.ADMIN_AUTH,
+      ROUTES.PRICING,
+      ROUTES.SUBSCRIPTION
     ],
     navbarItems: [
       { id: 'home', label: 'Inicio', icon: 'Home' },
       { id: 'browse', label: 'Música', icon: 'Music' },
       { id: 'requests', label: 'Mis Pedidos', icon: 'Clock' },
-      { id: 'favorites', label: 'Favoritos', icon: 'Heart' }
+      { id: 'favorites', label: 'Favoritos', icon: 'Heart' },
+      { id: 'pricing', label: 'Planes', icon: 'CreditCard' }
     ]
   },
 
@@ -125,11 +138,13 @@ export const APP_MODE_CONFIG = {
       ROUTES.RESTAURANT_PANEL,
       ROUTES.SUPERADMIN_PANEL,
       ROUTES.QUEUE_MANAGER,
-      ROUTES.ADMIN_AUTH
+      ROUTES.ADMIN_AUTH,
+      ROUTES.PAYMENT_APPROVAL
     ],
     navbarItems: [
       { id: 'dashboard', label: 'Dashboard', icon: 'BarChart3' },
       { id: 'queue', label: 'Cola', icon: 'List' },
+      { id: 'payment-approval', label: 'Pagos', icon: 'CreditCard' },
       { id: 'settings', label: 'Configuración', icon: 'Settings' }
     ]
   },
@@ -204,7 +219,10 @@ export const routeUtils = {
       [ROUTES.SUPERADMIN_PANEL]: 'superadmin-panel',
       [ROUTES.LOGIN]: 'login',
       [ROUTES.REGISTER]: 'register',
-      [ROUTES.EDIT_PROFILE]: 'edit-profile'
+      [ROUTES.EDIT_PROFILE]: 'edit-profile',
+      [ROUTES.PRICING]: 'pricing',
+      [ROUTES.SUBSCRIPTION]: 'subscription',
+      [ROUTES.PAYMENT_APPROVAL]: 'payment-approval'
     };
 
     return routeMap[route] || 'home';
@@ -220,7 +238,10 @@ export const routeUtils = {
       'superadmin-panel': ROUTES.SUPERADMIN_PANEL,
       'login': ROUTES.LOGIN,
       'register': ROUTES.REGISTER,
-      'edit-profile': ROUTES.EDIT_PROFILE
+      'edit-profile': ROUTES.EDIT_PROFILE,
+      'pricing': ROUTES.PRICING,
+      'subscription': ROUTES.SUBSCRIPTION,
+      'payment-approval': ROUTES.PAYMENT_APPROVAL
     };
 
     return stepMap[step] || ROUTES.HOME;

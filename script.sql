@@ -9,6 +9,25 @@ USE restaurant_music_db;
 -- TABLAS PRINCIPALES
 -- ============================
 
+-- Planes de suscripción
+CREATE TABLE subscription_plans (
+  id VARCHAR(50) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  price DECIMAL(10, 2) NOT NULL,
+  period VARCHAR(20) NOT NULL,
+  description TEXT,
+  features JSON,
+  limitations JSON,
+  color VARCHAR(50),
+  popular BOOLEAN DEFAULT false,
+  max_requests INT,
+  max_tables INT,
+  has_spotify BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Restaurantes
 CREATE TABLE restaurants (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -41,18 +60,25 @@ CREATE TABLE restaurants (
   auto_play BOOLEAN DEFAULT true,
   allow_explicit BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true,
-  subscription_plan ENUM('free', 'premium', 'enterprise') DEFAULT 'free',
+  subscription_plan_id VARCHAR(50) NULL,
+  subscription_status ENUM('active', 'inactive', 'pending', 'cancelled') DEFAULT 'pending',
+  subscription_start_date TIMESTAMP NULL,
+  subscription_end_date TIMESTAMP NULL,
+  subscription_payment_proof VARCHAR(500) NULL,
   last_login_at TIMESTAMP NULL,
   settings JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (subscription_plan_id) REFERENCES subscription_plans(id) ON DELETE SET NULL,
   INDEX idx_slug (slug),
   INDEX idx_email (email),
   INDEX idx_active (is_active),
   INDEX idx_cuisine (cuisine_type),
   INDEX idx_rating (rating),
   INDEX idx_verified (verified),
-  INDEX idx_city_country (city, country)
+  INDEX idx_city_country (city, country),
+  INDEX idx_subscription_plan (subscription_plan_id),
+  INDEX idx_subscription_status (subscription_status)
 );
 
 -- Usuarios registrados (cuentas permanentes)
@@ -226,10 +252,6 @@ CREATE TABLE activity_logs (
   INDEX idx_entity (entity_type, entity_id)
 );
 
--- ============================
--- NUEVAS TABLAS (DEL SCRIPT2)
--- ============================
-
 -- Playlists
 CREATE TABLE playlists (
   id VARCHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -326,67 +348,15 @@ CREATE TABLE auth_tokens (
   INDEX idx_token_type (token_type)
 );
 
--- ============================
--- TABLA DE PLANES DE SUSCRIPCIÓN
--- ============================
-
-CREATE TABLE subscription_plans (
-  id VARCHAR(50) PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  price DECIMAL(10, 2) NOT NULL,
-  period VARCHAR(20) NOT NULL,
-  description TEXT,
-  features JSON,
-  limitations JSON,
-  color VARCHAR(50),
-  popular BOOLEAN DEFAULT false,
-  max_requests INT,
-  max_tables INT,
-  has_spotify BOOLEAN DEFAULT false,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+-- ===============================
+-- INSERTAR DATOS DE PRUEBA
+-- ===============================
 
 -- Insertar planes de suscripción
 INSERT INTO subscription_plans (id, name, price, period, description, features, limitations, color, popular, max_requests, max_tables, has_spotify) VALUES
 ('starter', 'Starter', 80000.00, 'mes', 'Perfecto para comenzar', JSON_ARRAY('Hasta 50 mesas', 'Cola musical básica', '1,000 peticiones/mes', 'Soporte por email', 'Estadísticas básicas'), JSON_ARRAY('Sin personalización avanzada', 'Sin API access'), 'blue', false, 1000, 50, false),
 ('professional', 'Professional', 120000.00, 'mes', 'Ideal para restaurantes establecidos', JSON_ARRAY('Mesas ilimitadas', 'Cola musical avanzada', '10,000 peticiones/mes', 'Soporte prioritario 24/7', 'Analytics completos', 'Personalización completa', 'Integración con Spotify', 'Control de contenido'), JSON_ARRAY(), 'amber', true, 10000, null, true),
 ('enterprise', 'Enterprise', 300000.00, 'mes', 'Para cadenas y grandes establecimientos', JSON_ARRAY('Todo lo de Professional', 'Múltiples ubicaciones', 'Peticiones ilimitadas', 'Soporte dedicado', 'API completa', 'White-label', 'Integración personalizada', 'SLA garantizado'), JSON_ARRAY(), 'purple', false, null, null, true);
-
--- ============================
--- ACTUALIZAR TABLA RESTAURANTS
--- ============================
-
--- Agregar campos de suscripción
-ALTER TABLE restaurants
-ADD COLUMN subscription_plan_id VARCHAR(50) NULL,
-ADD COLUMN subscription_status ENUM('active', 'inactive', 'pending', 'cancelled') DEFAULT 'pending',
-ADD COLUMN subscription_start_date TIMESTAMP NULL,
-ADD COLUMN subscription_end_date TIMESTAMP NULL,
-ADD COLUMN subscription_payment_proof VARCHAR(500) NULL,
-ADD FOREIGN KEY (subscription_plan_id) REFERENCES subscription_plans(id) ON DELETE SET NULL,
-ADD INDEX idx_subscription_plan (subscription_plan_id),
-ADD INDEX idx_subscription_status (subscription_status);
-
--- Migrar datos existentes del enum al nuevo sistema
-UPDATE restaurants SET
-  subscription_plan_id = CASE
-    WHEN subscription_plan = 'free' THEN 'starter'
-    WHEN subscription_plan = 'premium' THEN 'professional'
-    WHEN subscription_plan = 'enterprise' THEN 'enterprise'
-    ELSE 'starter'
-  END,
-  subscription_status = 'active',
-  subscription_start_date = created_at
-WHERE subscription_plan IS NOT NULL;
-
--- Eliminar la columna antigua después de migrar
--- ALTER TABLE restaurants DROP COLUMN subscription_plan;
-
--- ===============================
--- INSERTAR DATOS DE PRUEBA
--- ===============================
 
 -- Restaurante de prueba
 -- Nota: En producción, hashea las contraseñas con bcrypt antes de insertar
@@ -468,9 +438,9 @@ GROUP BY sp.id, sp.name, sp.price, sp.period
 ORDER BY sp.price ASC;
 
 CREATE OR REPLACE VIEW user_favorites_view AS
-SELECT 
+SELECT
   COALESCE(f.registered_user_id, f.user_id) as user_id,
-  CASE 
+  CASE
     WHEN f.registered_user_id IS NOT NULL THEN 'registered'
     ELSE 'guest'
   END as user_type,
@@ -492,7 +462,7 @@ JOIN restaurants r ON f.restaurant_id = r.id
 ORDER BY f.created_at DESC;
 
 CREATE OR REPLACE VIEW user_stats_view AS
-SELECT 
+SELECT
   'registered' as user_type,
   ru.id as user_id,
   ru.name,
@@ -511,7 +481,7 @@ GROUP BY ru.id
 
 UNION ALL
 
-SELECT 
+SELECT
   'guest' as user_type,
   u.id as user_id,
   u.name,
@@ -531,7 +501,7 @@ GROUP BY u.id;
 
 DELIMITER //
 
--- Procedimiento para obtener perfil de usuario (actualizado con suscripciones)
+-- Procedimiento para obtener perfil de usuario
 CREATE PROCEDURE GetUserProfile(IN user_id VARCHAR(36), IN user_type ENUM('registered', 'guest'))
 BEGIN
   IF user_type = 'registered' THEN

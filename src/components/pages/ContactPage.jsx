@@ -11,6 +11,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import { CONTACT_INFO } from '../../constants/app.js';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -48,13 +49,13 @@ const ContactPage = () => {
     {
       icon: Mail,
       title: "Email",
-      content: "hola@bryjusound.com",
+      content: CONTACT_INFO.EMAIL,
       description: "Respuesta en menos de 24 horas"
     },
     {
       icon: Phone,
       title: "Teléfono",
-      content: "+57 300 123 4567",
+      content: CONTACT_INFO.PHONE,
       description: "Lunes a Viernes 8:00 AM - 6:00 PM"
     },
     {

@@ -22,6 +22,7 @@ import {
   Zap
 } from 'lucide-react';
 import apiService from '../../services/apiService';
+import { BRAND_INFO } from '../../constants/app.js';
 
 // Layout Components
 import EnhancedNavbar from '../layout/EnhancedNavbar';
@@ -32,6 +33,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 // Pricing Components
 import PricingPlans from '../common/PricingPlans';
+
 
 const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   // Auth Context
@@ -45,15 +47,19 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   const [currentPlayingPreview, setCurrentPlayingPreview] = useState(null);
   const [currentView, setCurrentView] = useState('home');
 
-  // Navigation handlers
+  // Navigation handlers - Redirigir en lugar de mostrar modals
   const handleShowLogin = () => {
-    // This will be handled by the navbar with actual login functionality
-    console.log('Show login modal');
+    // Redirigir a la página de login
+    window.location.href = '/login';
   };
 
   const handleShowRegister = () => {
-    // This will be handled by the navbar with actual register functionality
-    console.log('Show register modal');
+    // Redirigir a la página de register
+    window.location.href = '/register';
+  };
+
+  const handleSwitchToCustomer = () => {
+    // El contexto manejará el cambio de modo
   };
 
   const handleSelectRestaurant = () => {
@@ -250,7 +256,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           <div className="relative mb-4">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-3 leading-none">
               <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                BryJu Sound
+                {BRAND_INFO.NAME}
               </span>
             </h1>
             <div className="flex items-center justify-center space-x-3 text-base lg:text-lg font-semibold text-slate-300">
@@ -625,24 +631,10 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
           <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6">
             <PricingPlans
-              onPlanSelect={(planId) => {
-                console.log('Plan selected:', planId);
-                // Aquí puedes implementar la lógica para manejar la selección del plan
-                // Por ejemplo, redirigir a registro o mostrar modal de contacto
-                if (planId === 'enterprise') {
-                  // Para enterprise, mostrar modal de contacto
-                  alert('Para el plan Enterprise, por favor contacta nuestro equipo de ventas.');
-                } else {
-                  // Para otros planes, redirigir a registro
-                  handleShowRegister();
-                }
-              }}
-              onPlanAction={(plan) => {
-                console.log('Plan action:', plan);
-                if (plan.id === 'enterprise') {
-                  alert('Para el plan Enterprise, por favor contacta nuestro equipo de ventas.');
-                } else {
-                  handleShowRegister();
+              showSubscriptionFlow={true}
+              onSubscriptionComplete={(result) => {
+                if (result.success) {
+                  alert('¡Suscripción enviada exitosamente! Te contactaremos en las próximas 24 horas para confirmar tu plan.');
                 }
               }}
               showHeader={false}
@@ -654,6 +646,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
       {/* Footer - Always at bottom */}
       <EnhancedFooter />
+
     </div>
   );
 };

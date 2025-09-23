@@ -7,10 +7,23 @@ import {
   TrendingUp,
   Users,
   PlayCircle,
-  ArrowRight
+  ArrowRight,
+  CreditCard,
+  CheckCircle,
+  AlertCircle,
+  Crown
 } from 'lucide-react';
+import { SUBSCRIPTION_URLS, SUBSCRIPTION_STATUS } from '../../constants/app';
 
-const HomePage = ({ onViewChange, restaurant, userSession, stats = {} }) => {
+const HomePage = ({
+  onViewChange,
+  restaurant,
+  userSession,
+  stats = {},
+  user,
+  subscriptionStatus = null,
+  onShowSubscriptionFlow
+}) => {
   const quickStats = [
     {
       icon: Music,
@@ -65,6 +78,88 @@ const HomePage = ({ onViewChange, restaurant, userSession, stats = {} }) => {
     }
   ];
 
+
+  const getSubscriptionStatusDisplay = () => {
+    if (!subscriptionStatus) return null;
+
+    const { status, plan, expiresAt } = subscriptionStatus;
+
+    switch (status) {
+      case 'active':
+        return (
+          <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-6 mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                <CheckCircle className="h-6 w-6 text-green-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-green-400">Plan Activo</h3>
+                <p className="text-slate-300">
+                  Tienes el plan <span className="font-semibold text-white">{plan?.name}</span> activo
+                  {expiresAt && (
+                    <span className="text-slate-400"> • Expira: {new Date(expiresAt).toLocaleDateString()}</span>
+                  )}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-green-400">{plan?.price}</div>
+                <div className="text-sm text-slate-400">{plan?.period}</div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'pending':
+        return (
+          <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-6 mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center">
+                <Clock className="h-6 w-6 text-yellow-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-yellow-400">Suscripción Pendiente</h3>
+                <p className="text-slate-300">
+                  Tu plan <span className="font-semibold text-white">{plan?.name}</span> está siendo revisado
+                </p>
+              </div>
+              <button
+                onClick={() => window.location.href = SUBSCRIPTION_URLS.PENDING}
+                className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:from-yellow-600 hover:to-orange-700 transition-all duration-300"
+              >
+                Ver Detalles
+              </button>
+            </div>
+          </div>
+        );
+
+      case 'expired':
+        return (
+          <div className="bg-gradient-to-r from-red-500/10 to-pink-500/10 border border-red-500/30 rounded-xl p-6 mb-8">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-red-400">Suscripción Expirada</h3>
+                <p className="text-slate-300">
+                  Tu plan anterior ha expirado. Renueva para continuar disfrutando del servicio.
+                </p>
+              </div>
+              <button
+                onClick={() => window.location.href = SUBSCRIPTION_URLS.RENEWAL}
+                className="bg-gradient-to-r from-red-500 to-pink-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-red-600 hover:to-pink-700 transition-all duration-300"
+              >
+                Renovar Plan
+              </button>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       
@@ -114,6 +209,33 @@ const HomePage = ({ onViewChange, restaurant, userSession, stats = {} }) => {
           Explora nuestro catálogo musical, haz peticiones y crea el ambiente perfecto para tu experiencia gastronómica
         </p>
       </div>
+
+      {/* Subscription Status */}
+      {getSubscriptionStatusDisplay()}
+
+      {/* Subscription CTA for users without subscription */}
+      {!subscriptionStatus && user && (
+        <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-6 mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <Crown className="h-6 w-6 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">¡Mejora tu experiencia!</h3>
+                <p className="text-slate-300">Suscríbete a un plan y desbloquea todas las funciones premium</p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.href = SUBSCRIPTION_URLS.NEW}
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center space-x-2"
+            >
+              <CreditCard className="h-5 w-5" />
+              <span>Ver Planes</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-12">
@@ -215,6 +337,7 @@ const HomePage = ({ onViewChange, restaurant, userSession, stats = {} }) => {
           Agrega canciones a favoritos para encontrarlas más rápido. También puedes explorar diferentes géneros para descubrir nueva música que se ajuste al ambiente del restaurante.
         </p>
       </div>
+
     </div>
   );
 };

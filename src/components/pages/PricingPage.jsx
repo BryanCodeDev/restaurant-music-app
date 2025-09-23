@@ -1,11 +1,18 @@
 import React from 'react';
 import PricingPlans, { PRICING_PLANS } from '../common/PricingPlans';
 import { Check, Star, Crown, Zap, ArrowRight, Shield, Headphones, BarChart3 } from 'lucide-react';
+import { SUBSCRIPTION_URLS } from '../../constants/app';
 
 const PricingPage = () => {
   const handlePlanSelect = (planId) => {
-    console.log('Plan selected:', planId);
-    // Aquí iría la lógica para procesar la selección del plan
+    // Redirigir al flujo real de suscripciones
+    window.location.href = `${SUBSCRIPTION_URLS.NEW}?plan=${planId}`;
+  };
+
+  const handleStartFreeTrial = () => {
+    // Redirigir al flujo de suscripciones con el plan más popular
+    const popularPlan = PRICING_PLANS.find(plan => plan.popular);
+    window.location.href = `${SUBSCRIPTION_URLS.NEW}?plan=${popularPlan?.id || 'professional'}`;
   };
 
   const features = [
@@ -98,7 +105,10 @@ const PricingPage = () => {
         <p className="text-xl text-purple-100 mb-8">
           Únete a cientos de restaurantes que ya usan BryJu Sound
         </p>
-        <button className="bg-white text-purple-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center space-x-2 mx-auto">
+        <button
+          onClick={handleStartFreeTrial}
+          className="bg-white text-purple-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition-colors flex items-center space-x-2 mx-auto"
+        >
           <span>Comenzar Prueba Gratis</span>
           <ArrowRight className="h-5 w-5" />
         </button>

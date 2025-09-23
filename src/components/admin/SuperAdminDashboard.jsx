@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Building2, BarChart3, AlertTriangle, CheckCircle, XCircle, Download, Edit3, LogOut } from 'lucide-react';
+import { Users, Building2, BarChart3, AlertTriangle, CheckCircle, XCircle, Download, Edit3, LogOut, CreditCard } from 'lucide-react';
 import apiService from '../../services/apiService';
 import EditProfile from '../auth/EditProfile';
 
@@ -7,7 +7,7 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
   const [activeTab, setActiveTab] = useState('pending');
   const [pendingRestaurants, setPendingRestaurants] = useState([]);
   const [globalStats, setGlobalStats] = useState({});
-  const [users, setUsers] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
@@ -15,7 +15,7 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
   const [rejectReason, setRejectReason] = useState('');
   const [file, setFile] = useState(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedSubscription, setSelectedSubscription] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -24,17 +24,18 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [pendingRes, usersRes] = await Promise.all([
+      const [pendingRes, subscriptionsRes, statsRes] = await Promise.all([
         apiService.getPendingRestaurants(),
-        apiService.getAllUsers() // Assume new endpoint or simulate
+        apiService.getAllSubscriptions(),
+        apiService.getGlobalStats()
       ]);
 
       setPendingRestaurants(pendingRes.data?.pendingRestaurants || []);
-      setUsers(usersRes.data || []);
-      setGlobalStats({
-        totalUsers: usersRes.data?.length || 0,
-        totalRestaurants: pendingRes.data?.totalRestaurants || 0,
-        totalRequests: 0, // From stats endpoint
+      setSubscriptions(subscriptionsRes.data?.subscriptions || []);
+      setGlobalStats(statsRes.data || {
+        totalUsers: 0,
+        totalRestaurants: 0,
+        totalRequests: 0,
         pendingRestaurants: pendingRes.data?.pendingRestaurants?.length || 0
       });
     } catch (err) {
@@ -84,24 +85,42 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
     }
   };
 
-  const handleBanUser = async (userId) => {
+  const handleApproveSubscription = async (subscriptionId) => {
     try {
-      // Assume apiService.updateUser(userId, { isActive: false })
-      const response = await apiService.updateProfile({ isActive: false }); // Adjust for user ID
+      const response = await apiService.approveSubscription(subscriptionId);
       if (response.success) {
         loadData();
+        setSelectedSubscription(null);
       } else {
-        setError('Ban failed: ' + response.message);
+        setError('Subscription approval failed: ' + response.message);
       }
     } catch (err) {
-      setError('Ban failed: ' + err.message);
+      setError('Subscription approval failed: ' + err.message);
+    }
+  };
+
+  const handleRejectSubscription = async (subscriptionId, reason) => {
+    if (!reason.trim()) {
+      setError('Rejection reason is required');
+      return;
+    }
+    try {
+      const response = await apiService.rejectSubscription(subscriptionId, reason);
+      if (response.success) {
+        loadData();
+        setSelectedSubscription(null);
+      } else {
+        setError('Subscription rejection failed: ' + response.message);
+      }
+    } catch (err) {
+      setError('Subscription rejection failed: ' + err.message);
     }
   };
 
   const tabs = [
-    { id: 'pending', label: 'Pending Restaurants', icon: Restaurant },
-    { id: 'stats', label: 'Global Stats', icon: BarChart3 },
-    { id: 'users', label: 'User Management', icon: Users }
+    { id: 'pending', label: 'Pending Restaurants', icon: Building2 },
+    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+    { id: 'stats', label: 'Global Stats', icon: BarChart3 }
   ];
 
   if (loading) return <div className="p-8 text-center">Loading dashboard...</div>;
@@ -260,20 +279,20 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
-                    <p className="text-3xl font-bold text-white">{globalStats.totalUsers}</p>
-                    <p className="text-slate-400 mt-1">Total Users</p>
-                  </div>
-                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
-                    <p className="text-3xl font-bold text-white">{globalStats.totalRestaurants}</p>
+                    <p className="text-3xl font-bold text-white">{globalStats.totalRestaurants || 0}</p>
                     <p className="text-slate-400 mt-1">Total Restaurants</p>
                   </div>
                   <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
-                    <p className="text-3xl font-bold text-white">{globalStats.totalRequests}</p>
-                    <p className="text-slate-400 mt-1">Total Requests</p>
+                    <p className="text-3xl font-bold text-white">{subscriptions.filter(s => s.status === 'approved').length}</p>
+                    <p className="text-slate-400 mt-1">Active Subscriptions</p>
                   </div>
                   <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
-                    <p className="text-3xl font-bold text-white">{globalStats.pendingRestaurants}</p>
-                    <p className="text-slate-400 mt-1">Pending Approvals</p>
+                    <p className="text-3xl font-bold text-white">{subscriptions.filter(s => s.status === 'pending').length}</p>
+                    <p className="text-slate-400 mt-1">Pending Subscriptions</p>
+                  </div>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
+                    <p className="text-3xl font-bold text-white">{globalStats.pendingRestaurants || 0}</p>
+                    <p className="text-slate-400 mt-1">Pending Restaurants</p>
                   </div>
                 </div>
                 <button className="mt-6 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center space-x-2">
@@ -283,61 +302,80 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
               </div>
             )}
 
-            {activeTab === 'users' && (
+            {activeTab === 'subscriptions' && (
               <div>
                 <h3 className="text-xl font-semibold mb-4 flex items-center space-x-2">
-                  <Users className="h-5 w-5" />
-                  <span>User Management</span>
+                  <CreditCard className="h-5 w-5" />
+                  <span>Subscription Management ({subscriptions.length})</span>
                 </h3>
-                <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-slate-700/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Name</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Email</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Role</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-slate-300">Status</th>
-                        <th className="px-4 py-3 text-right text-sm font-medium text-slate-300">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700">
-                      {users.map(user => (
-                        <tr key={user.id} className="hover:bg-slate-800/30">
-                          <td className="px-4 py-3 text-sm text-white">{user.name}</td>
-                          <td className="px-4 py-3 text-sm text-slate-300">{user.email}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              user.role === 'superadmin' ? 'bg-purple-500/20 text-purple-300' : 'bg-green-500/20 text-green-300'
-                            }`}>
-                              {user.role}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              user.isActive ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
-                            }`}>
-                              {user.isActive ? 'Active' : 'Banned'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm">
+                {subscriptions.length === 0 ? (
+                  <p className="text-slate-400 text-center py-8">No subscriptions found</p>
+                ) : (
+                  <div className="space-y-4">
+                    {subscriptions.map(sub => (
+                      <div key={sub.id} className="bg-slate-700/50 border border-slate-600 rounded-xl p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-white">{sub.restaurantName || 'Restaurant'}</h4>
+                            <p className="text-slate-400">{sub.email} • Plan: {sub.planType}</p>
+                            <p className="text-sm text-slate-500 mt-2">
+                              Status: <span className={`px-2 py-1 rounded-full text-xs ${
+                                sub.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
+                                sub.status === 'approved' ? 'bg-green-500/20 text-green-300' :
+                                'bg-red-500/20 text-red-300'
+                              }`}>
+                                {sub.status}
+                              </span>
+                            </p>
+                            {sub.paymentProof && (
+                              <p className="text-sm text-blue-400 mt-1">Payment proof uploaded</p>
+                            )}
+                          </div>
+                          <div className="flex space-x-2 ml-4">
                             <button
-                              onClick={() => setSelectedUser(user)}
-                              className="text-blue-400 hover:text-blue-300 mr-2"
+                              onClick={() => setSelectedSubscription(selectedSubscription === sub.id ? null : sub.id)}
+                              className="p-2 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors"
                             >
-                              Edit
+                              {selectedSubscription === sub.id ? <XCircle className="h-5 w-5" /> : <Edit3 className="h-5 w-5" />}
                             </button>
-                            <button
-                              onClick={() => handleBanUser(user.id)}
-                              className="text-red-400 hover:text-red-300"
-                            >
-                              {user.isActive ? 'Ban' : 'Unban'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                          </div>
+                        </div>
+
+                        {selectedSubscription === sub.id && (
+                          <div className="mt-4 pt-4 border-t border-slate-600">
+                            <div className="flex space-x-3">
+                              {sub.status === 'pending' && (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveSubscription(sub.id)}
+                                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span>Approve</span>
+                                  </button>
+                                  <input
+                                    type="text"
+                                    value={rejectReason}
+                                    onChange={(e) => setRejectReason(e.target.value)}
+                                    placeholder="Rejection reason..."
+                                    className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+                                  />
+                                  <button
+                                    onClick={() => handleRejectSubscription(sub.id, rejectReason)}
+                                    className="flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                    <span>Reject</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -357,42 +395,6 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
         />
       )}
 
-      {/* Edit Selected User Modal */}
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 max-w-md w-full rounded-2xl border border-slate-700 p-6">
-            <h3 className="text-lg font-semibold mb-4">Edit User: {selectedUser.name}</h3>
-            <div className="space-y-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={selectedUser.isActive}
-                  onChange={() => handleBanUser(selectedUser.id)}
-                  className="rounded text-green-500"
-                />
-                <span>Active</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={selectedUser.role === 'superadmin'}
-                  disabled // Can't change role via UI
-                  className="rounded text-purple-500"
-                />
-                <span>Super Admin</span>
-              </label>
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setSelectedUser(null)}
-                className="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

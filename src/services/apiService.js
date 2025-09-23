@@ -289,6 +289,55 @@ class ApiService {
     });
     return response;
   }
+
+  // ===== ADMIN SUBSCRIPTION MANAGEMENT =====
+
+  async getAllSubscriptions() {
+    const response = await this.request('/admin/subscriptions');
+    return response.success ? response.data : response;
+  }
+
+  async approveSubscription(subscriptionId) {
+    const response = await this.request(`/admin/subscriptions/${subscriptionId}/approve`, {
+      method: 'PUT'
+    });
+    return response;
+  }
+
+  async rejectSubscription(subscriptionId, reason) {
+    const response = await this.request(`/admin/subscriptions/${subscriptionId}/reject`, {
+      method: 'PUT',
+      body: { reason }
+    });
+    return response;
+  }
+
+  async getGlobalStats() {
+    const response = await this.request('/admin/global-stats');
+    return response.success ? response.data : response;
+  }
+
+  // ===== USER MANAGEMENT =====
+
+  async getAllUsers() {
+    // Note: This endpoint might not exist in the backend spec
+    // Using a fallback approach or removing this functionality
+    console.warn('getAllUsers: This endpoint may not be available in the backend');
+    return {
+      success: false,
+      message: 'User management endpoint not available',
+      data: []
+    };
+  }
+
+  async updateUserStatus(userId, isActive) {
+    // This would need a specific endpoint for user management
+    console.warn('updateUserStatus: This endpoint may not be available in the backend');
+    return {
+      success: false,
+      message: 'User status update endpoint not available'
+    };
+  }
   
   // ===== RESTAURANTS =====
   

@@ -18,10 +18,13 @@ import {
   BarChart3,
   List,
   Edit3,
-  RefreshCw
+  RefreshCw,
+  CreditCard,
+  DollarSign
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import routeUtils from '../../utils/routeUtils';
+import { BRAND_INFO } from '../../constants/app.js';
 
 const EnhancedNavbar = ({
   currentView,
@@ -54,6 +57,12 @@ const EnhancedNavbar = ({
   };
 
   const handleNavClick = (itemId) => {
+    // Si es pricing, redirigir a la página de precios
+    if (itemId === 'pricing') {
+      window.location.href = '/pricing';
+      return;
+    }
+
     onViewChange(itemId);
     setIsMobileMenuOpen(false);
   };
@@ -94,7 +103,9 @@ const EnhancedNavbar = ({
       Heart,
       BarChart3,
       List,
-      Settings
+      Settings,
+      CreditCard,
+      DollarSign
     };
     return icons[iconName] || Home;
   };
@@ -114,7 +125,7 @@ const EnhancedNavbar = ({
             </div>
             <div className="flex flex-col">
               <span className="text-xl sm:text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                BryJu Sound
+                {BRAND_INFO.NAME}
               </span>
               <div className="flex items-center space-x-2 text-xs text-slate-400">
                 {restaurant && (

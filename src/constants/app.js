@@ -73,15 +73,16 @@ export const LEGAL_PAGES = {
 };
 
 export const SOCIAL_LINKS = {
-  FACEBOOK: 'https://facebook.com/bryjusound',
-  INSTAGRAM: 'https://instagram.com/bryjusound',
-  TWITTER: 'https://twitter.com/bryjusound',
-  LINKEDIN: 'https://linkedin.com/company/bryjusound'
+  WHATSAPP: 'https://wa.me/+573212209943',
+  INSTAGRAM: 'https://www.instagram.com/mastercodecompany/',
+  TIKTOK: 'https://www.tiktok.com/@mastercodecompany_',
+  TWITTER: 'https://x.com/mastercodee',
+  LINKEDIN: 'https://linkedin.com/company/mastercodecompany'
 };
 
 export const CONTACT_INFO = {
-  EMAIL: 'contacto@bryjusound.com',
-  PHONE: '+57 300 123 4567',
+  EMAIL: 'mastercodecompany@gmail.com',
+  PHONE: '+57 321 220 9943',
   ADDRESS: 'Bogotá, Colombia'
 };
 
@@ -89,4 +90,39 @@ export const BRAND_INFO = {
   NAME: 'BryJu Sound',
   TAGLINE: 'La música perfecta para tu restaurante',
   DESCRIPTION: 'Sistema SaaS para gestión musical en restaurantes con integración Spotify'
+};
+
+// Constantes para suscripciones
+export const SUBSCRIPTION_TYPES = {
+  NEW: 'new',
+  RENEWAL: 'renewal',
+  PENDING: 'pending'
+};
+
+export const SUBSCRIPTION_URLS = {
+  NEW: '/subscription?plan=new',
+  RENEWAL: '/subscription?plan=renewal',
+  PENDING: '/subscription?plan=pending',
+  PRICING: '/pricing',
+  PAYMENT_APPROVAL: '/admin/payment-approval'
+};
+
+export const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'active',
+  PENDING: 'pending',
+  EXPIRED: 'expired',
+  CANCELLED: 'cancelled'
+};
+
+export const PAYMENT_METHODS = {
+  QR: 'qr',
+  TRANSFER: 'transfer'
+};
+
+export const SUBSCRIPTION_STEPS = {
+  PLAN_SELECTION: 1,
+  AUTHENTICATION: 2,
+  USER_INFO: 3,
+  PAYMENT: 4,
+  CONFIRMATION: 5
 };

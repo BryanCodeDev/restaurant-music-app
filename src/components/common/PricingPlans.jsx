@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Check, X, Crown, Star, Zap } from 'lucide-react';
+import SubscriptionFlow from './SubscriptionFlow';
 
 // Configuración de planes de suscripción
 export const PRICING_PLANS = [
@@ -218,9 +219,13 @@ const PricingPlans = ({
   layout = 'grid', // 'grid' | 'list'
   showHeader = true,
   showGuarantee = true,
-  className = ''
+  className = '',
+  showSubscriptionFlow = false,
+  onSubscriptionComplete
 }) => {
   const { plans } = usePricingPlans();
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [selectedPlanForSubscription, setSelectedPlanForSubscription] = useState(null);
 
   const handlePlanSelect = (planId) => {
     if (onPlanSelect) {
@@ -229,56 +234,84 @@ const PricingPlans = ({
   };
 
   const handlePlanAction = (plan) => {
-    if (onPlanAction) {
+    if (showSubscriptionFlow) {
+      setSelectedPlanForSubscription(plan);
+      setShowSubscriptionModal(true);
+    } else if (onPlanAction) {
       onPlanAction(plan);
     }
   };
 
+  const handleSubscriptionComplete = (result) => {
+    setShowSubscriptionModal(false);
+    setSelectedPlanForSubscription(null);
+    if (onSubscriptionComplete) {
+      onSubscriptionComplete(result);
+    }
+  };
+
+  const handleCloseSubscriptionModal = () => {
+    setShowSubscriptionModal(false);
+    setSelectedPlanForSubscription(null);
+  };
+
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      {showHeader && (
-        <div className="text-center">
-          <h3 className="text-xl font-bold text-white mb-2">Elige tu Plan</h3>
-          <p className="text-slate-400">Selecciona el plan que mejor se adapte a tu restaurante</p>
+    <>
+      <div className={`space-y-6 ${className}`}>
+        {/* Header */}
+        {showHeader && (
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-white mb-2">Elige tu Plan</h3>
+            <p className="text-slate-400">Selecciona el plan que mejor se adapte a tu restaurante</p>
+          </div>
+        )}
+
+        {/* Plans Grid */}
+        <div className={
+          layout === 'grid'
+            ? 'grid grid-cols-1 lg:grid-cols-3 gap-6'
+            : 'space-y-4'
+        }>
+          {plans.map((plan) => (
+            <PricingCard
+              key={plan.id}
+              plan={plan}
+              selected={selectedPlan === plan.id}
+              onSelect={handlePlanSelect}
+              buttonAction={handlePlanAction}
+              className={layout === 'list' ? 'max-w-md mx-auto' : ''}
+            />
+          ))}
         </div>
-      )}
 
-      {/* Plans Grid */}
-      <div className={
-        layout === 'grid'
-          ? 'grid grid-cols-1 lg:grid-cols-3 gap-6'
-          : 'space-y-4'
-      }>
-        {plans.map((plan) => (
-          <PricingCard
-            key={plan.id}
-            plan={plan}
-            selected={selectedPlan === plan.id}
-            onSelect={handlePlanSelect}
-            buttonAction={handlePlanAction}
-            className={layout === 'list' ? 'max-w-md mx-auto' : ''}
-          />
-        ))}
-      </div>
-
-      {/* Guarantee */}
-      {showGuarantee && (
-        <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Check className="h-4 w-4 text-green-400" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-1">Garantía de 30 días</h4>
-              <p className="text-sm text-slate-400">
-                Si no estás satisfecho con el servicio, te devolvemos el 100% de tu dinero en los primeros 30 días.
-              </p>
+        {/* Guarantee */}
+        {showGuarantee && (
+          <div className="bg-slate-800/30 border border-slate-700/30 rounded-xl p-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-8 h-8 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Check className="h-4 w-4 text-green-400" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-white mb-1">Garantía de 30 días</h4>
+                <p className="text-sm text-slate-400">
+                  Si no estás satisfecho con el servicio, te devolvemos el 100% de tu dinero en los primeros 30 días.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+      </div>
+
+      {/* Subscription Flow Modal */}
+      {showSubscriptionFlow && (
+        <SubscriptionFlow
+          isOpen={showSubscriptionModal}
+          onClose={handleCloseSubscriptionModal}
+          initialPlan={selectedPlanForSubscription}
+          onComplete={handleSubscriptionComplete}
+        />
       )}
-    </div>
+    </>
   );
 };
 
