@@ -35,16 +35,17 @@ const EnhancedNavbar = ({
   onProfile,
   onEditProfile,
   onSettings,
-  onSelectRestaurant
+  onSelectRestaurant,
+  appMode
 }) => {
-  const { user, userType, appMode, isAuthenticated } = useAuth();
+  const { user, userType, isAuthenticated } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAuthMenu, setShowAuthMenu] = useState(false);
 
   // Obtener configuración de navegación
-  const navConfig = routeUtils.getNavigationConfig(userType, appMode);
-  const navbarItems = routeUtils.getNavbarItems(appMode);
+  const navConfig = routeUtils.getNavigationConfig(userType, appMode || 'restaurant-selector');
+  const navbarItems = routeUtils.getNavbarItems(appMode || 'restaurant-selector');
   const showAuthButtons = routeUtils.shouldShowAuthButtons(userType);
   const showAdminButton = routeUtils.shouldShowAdminButton(userType);
 

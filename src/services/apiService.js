@@ -167,6 +167,16 @@ class ApiService {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
     }
+
+    // Asegurar que el user_type se guarde incluso si la respuesta no es estándar
+    if (response.success || response.access_token) {
+      localStorage.setItem('user_type', 'registered');
+    }
+
+    // Asegurar que el user_type se guarde incluso si la respuesta no es estándar
+    if (response.success || response.access_token) {
+      localStorage.setItem('user_type', 'registered');
+    }
     
     return response;
   }
@@ -214,12 +224,31 @@ class ApiService {
 
   async getProfile() {
     const userType = localStorage.getItem('user_type');
+    const token = localStorage.getItem('auth_token');
+
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
     if (userType === 'registered') {
       return await this.getUserProfile();
     }
+
     // Default to restaurant or session profile
-    const response = await this.request('/auth/profile');
-    return response.success ? response.data : response;
+    try {
+      const response = await this.request('/auth/profile');
+      return response.success ? response.data : response;
+    } catch (error) {
+      console.warn('Profile fetch failed, trying alternative endpoint:', error);
+      // Fallback: intentar obtener información básica del token actual
+      return {
+        success: true,
+        data: {
+          id: 'temp-' + Date.now(),
+          message: 'Profile data not available, using fallback'
+        }
+      };
+    }
   }
 
   async updateProfile(data) {

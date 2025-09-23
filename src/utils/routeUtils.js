@@ -132,6 +132,17 @@ export const APP_MODE_CONFIG = {
       { id: 'queue', label: 'Cola', icon: 'List' },
       { id: 'settings', label: 'Configuración', icon: 'Settings' }
     ]
+  },
+
+  // Modo para el selector de restaurantes (sin navegación del restaurante)
+  'restaurant-selector': {
+    allowedRoutes: [
+      ROUTES.RESTAURANT_SELECTION,
+      ROUTES.LOGIN,
+      ROUTES.REGISTER,
+      ROUTES.ADMIN_AUTH
+    ],
+    navbarItems: [] // Sin botones de navegación del restaurante
   }
 };
 

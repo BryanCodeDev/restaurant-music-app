@@ -35,7 +35,7 @@ import PricingPlans from '../common/PricingPlans';
 
 const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   // Auth Context
-  const { selectedRestaurant, switchToAdminMode, switchToCustomerMode } = useAuth();
+  const { selectedRestaurant, switchToAdminMode, switchToCustomerMode, login, register, logout: authLogout } = useAuth();
 
   const [restaurants, setRestaurants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,13 +47,13 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
   // Navigation handlers
   const handleShowLogin = () => {
-    // This will be handled by the navbar
-    console.log('Show login');
+    // This will be handled by the navbar with actual login functionality
+    console.log('Show login modal');
   };
 
   const handleShowRegister = () => {
-    // This will be handled by the navbar
-    console.log('Show register');
+    // This will be handled by the navbar with actual register functionality
+    console.log('Show register modal');
   };
 
   const handleSelectRestaurant = () => {
@@ -68,7 +68,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   };
 
   const handleLogout = () => {
-    console.log('Logout clicked');
+    authLogout();
   };
 
   const handleProfile = () => {
@@ -188,9 +188,9 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
 
       {/* Navbar */}
       <EnhancedNavbar
-        currentView={currentView}
-        onViewChange={handleViewChange}
-        restaurant={selectedRestaurant}
+        currentView="restaurant-selection"
+        onViewChange={() => {}}
+        restaurant={null}
         userTable="Selecciona tu restaurante"
         onSwitchToAdmin={onSwitchToAdmin}
         onShowLogin={handleShowLogin}
@@ -200,6 +200,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
         onEditProfile={handleEditProfile}
         onSettings={handleSettings}
         onSelectRestaurant={handleSelectRestaurant}
+        appMode="restaurant-selector"
       />
 
       {/* Background Elements */}
@@ -274,7 +275,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           <div className="max-w-3xl mx-auto">
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-              <div className="relative bg-slate-800/60 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden">
+              <div className="relative bg-gradient-to-r from-slate-800/60 to-slate-900/60 backdrop-blur-xl border border-purple-500/30 rounded-2xl overflow-hidden">
                 <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
                   <Search className="h-6 w-6 text-slate-400" />
                 </div>
@@ -304,14 +305,14 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                 className={`group flex items-center space-x-3 px-6 py-3 rounded-2xl font-semibold text-sm transition-all duration-300 ${
                   selectedFilter === filter.id
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-xl shadow-blue-500/25 scale-105'
-                    : 'bg-slate-800/40 text-slate-300 border border-slate-700/50 hover:bg-slate-800/60 hover:border-slate-600 hover:scale-105'
+                    : 'bg-gradient-to-r from-slate-800/40 to-slate-900/40 text-slate-300 border border-purple-500/30 hover:from-slate-800/60 hover:to-slate-900/60 hover:border-purple-400/50 hover:scale-105'
                 }`}
               >
                 <span>{filter.name}</span>
                 <div className={`px-2 py-1 rounded-full text-xs font-bold ${
                   selectedFilter === filter.id 
                     ? 'bg-white/20 text-white' 
-                    : 'bg-slate-700/50 text-slate-400 group-hover:bg-slate-600/50'
+                    : 'bg-gradient-to-r from-slate-700/50 to-slate-800/50 text-slate-300 group-hover:from-slate-600/70 group-hover:to-slate-700/70'
                 }`}>
                   {filter.count}
                 </div>
@@ -350,7 +351,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           {filteredRestaurants.map((restaurant, index) => (
             <div
               key={restaurant.id}
-              className="group relative bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 rounded-2xl overflow-hidden hover:bg-slate-800/60 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer transform"
+              className="group relative bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl border border-purple-500/30 rounded-2xl overflow-hidden hover:from-slate-800/60 hover:to-slate-900/60 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer transform"
               style={{ animationDelay: `${index * 0.1}s` }}
               onClick={() => handleRestaurantSelect(restaurant)}
             >
@@ -447,7 +448,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                             {restaurant.description}
                           </p>
                         )}
-                        <p className="text-slate-500 text-xs">{restaurant.cuisine_type || 'Restaurante'}</p>
+                        <p className="text-slate-300 text-xs">{restaurant.cuisine_type || 'Restaurante'}</p>
                       </div>
                     </div>
                     <div className="flex flex-col items-end space-y-1">
@@ -456,7 +457,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                         <span className="text-sm font-bold">{restaurant.rating || 'N/A'}</span>
                       </div>
                       {restaurant.reviewCount > 0 && (
-                        <span className="text-xs text-slate-500">({restaurant.reviewCount})</span>
+                        <span className="text-xs text-slate-300">({restaurant.reviewCount})</span>
                       )}
                     </div>
                   </div>
@@ -467,7 +468,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                     <span className="text-sm">{restaurant.address}</span>
                     {restaurant.priceRange && (
                       <>
-                        <span className="text-slate-600">•</span>
+                        <span className="text-slate-400">•</span>
                         <span className="text-sm">{restaurant.priceRange}</span>
                       </>
                     )}
@@ -518,21 +519,21 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
                       <Clock className="h-3 w-3" />
                     </div>
                     <div className="text-white font-bold text-sm">{restaurant.queueLength || 0}</div>
-                    <div className="text-slate-500 text-xs">En Cola</div>
+                    <div className="text-slate-300 text-xs">En Cola</div>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 text-slate-400 mb-1">
                       <Users className="h-3 w-3" />
                     </div>
                     <div className="text-white font-bold text-sm">{restaurant.activeCustomers || 0}</div>
-                    <div className="text-slate-500 text-xs">Activos</div>
+                    <div className="text-slate-300 text-xs">Activos</div>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 text-slate-400 mb-1">
                       <Music className="h-3 w-3" />
                     </div>
                     <div className="text-white font-bold text-sm">{restaurant.totalSongs || 0}</div>
-                    <div className="text-slate-500 text-xs">Canciones</div>
+                    <div className="text-slate-300 text-xs">Canciones</div>
                   </div>
                 </div>
 
@@ -572,7 +573,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
           <div className="text-center py-20 lg:py-32">
             <div className="relative mb-12">
               <div className="absolute inset-0 bg-gradient-to-r from-slate-600 to-slate-700 rounded-full opacity-20 blur-3xl"></div>
-              <div className="relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 p-12 rounded-full border border-slate-700/50 w-48 h-48 flex items-center justify-center mx-auto">
+              <div className="relative bg-gradient-to-br from-purple-500/10 to-blue-500/10 p-12 rounded-full border border-purple-500/30 w-48 h-48 flex items-center justify-center mx-auto">
                 <div className="text-center">
                   <Music className="h-16 w-16 text-slate-500 mx-auto mb-2" />
                   <div className="w-8 h-1 bg-slate-600 rounded-full mx-auto"></div>
@@ -580,10 +581,10 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
               </div>
             </div>
             
-            <h3 className="text-3xl font-bold text-slate-400 mb-6">
+            <h3 className="text-3xl font-bold text-slate-200 mb-6">
               Sin resultados por ahora
             </h3>
-            <p className="text-slate-500 mb-12 max-w-lg mx-auto text-lg leading-relaxed">
+            <p className="text-slate-300 mb-12 max-w-lg mx-auto text-lg leading-relaxed">
               No encontramos restaurantes que coincidan con tu búsqueda. Prueba con otros filtros o términos para descubrir nuevas experiencias musicales.
             </p>
             
@@ -600,12 +601,12 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
               </button>
               
               <div className="flex flex-wrap justify-center gap-3 mt-8">
-                <span className="text-slate-500">Prueba buscar:</span>
+                <span className="text-slate-300">Prueba buscar:</span>
                 {['Jazz', 'Rock', 'Zona Rosa', 'Premium'].map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => setSearchTerm(suggestion)}
-                    className="px-3 py-1 bg-slate-800/50 text-slate-400 rounded-full text-sm hover:bg-slate-700/50 hover:text-white transition-colors"
+                    className="px-3 py-1 bg-gradient-to-r from-slate-800/50 to-slate-900/50 text-slate-300 rounded-full text-sm hover:from-slate-700/70 hover:to-slate-800/70 hover:text-white transition-colors"
                   >
                     {suggestion}
                   </button>
@@ -622,9 +623,28 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
             <p className="text-slate-300 text-lg">Ofrece a tus clientes el control total de la música</p>
           </div>
 
-          <div className="bg-gradient-to-r from-slate-800/30 to-slate-900/30 backdrop-blur-xl border border-slate-700/30 rounded-2xl p-6">
+          <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-xl border border-purple-500/30 rounded-2xl p-6">
             <PricingPlans
-              onPlanSelect={(planId) => console.log('Plan selected:', planId)}
+              onPlanSelect={(planId) => {
+                console.log('Plan selected:', planId);
+                // Aquí puedes implementar la lógica para manejar la selección del plan
+                // Por ejemplo, redirigir a registro o mostrar modal de contacto
+                if (planId === 'enterprise') {
+                  // Para enterprise, mostrar modal de contacto
+                  alert('Para el plan Enterprise, por favor contacta nuestro equipo de ventas.');
+                } else {
+                  // Para otros planes, redirigir a registro
+                  handleShowRegister();
+                }
+              }}
+              onPlanAction={(plan) => {
+                console.log('Plan action:', plan);
+                if (plan.id === 'enterprise') {
+                  alert('Para el plan Enterprise, por favor contacta nuestro equipo de ventas.');
+                } else {
+                  handleShowRegister();
+                }
+              }}
               showHeader={false}
               className="mb-0"
             />

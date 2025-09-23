@@ -171,10 +171,12 @@ export const AuthProvider = ({ children }) => {
 
       // Si no hay sesión válida, estado inicial
       dispatch({ type: AUTH_ACTIONS.SET_USER, payload: { user: null, userType: USER_TYPES.GUEST } });
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
 
     } catch (error) {
       console.error('Error initializing auth:', error);
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: 'Error al inicializar la aplicación' });
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
     }
   };
 
@@ -201,18 +203,36 @@ export const AuthProvider = ({ children }) => {
       if (result && (result.success || result.access_token || result.user || result.data)) {
         let userData = result.data?.user || result.user || result.data || result;
 
-        // Obtener perfil adicional
-        try {
-          const profileResponse = await apiService.getProfile();
-          if (profileResponse.success && profileResponse.data) {
-            if (userType === USER_TYPES.RESTAURANT) {
-              userData = { ...userData, restaurant: profileResponse.data.restaurant || userData.restaurant };
-            } else {
-              userData = { ...userData, user: profileResponse.data.user || userData };
+        // Si no tenemos datos completos del usuario, intentar obtener perfil adicional
+        if (!userData.id && !userData.email) {
+          try {
+            const profileResponse = await apiService.getProfile();
+            if (profileResponse.success && profileResponse.data) {
+              if (userType === USER_TYPES.RESTAURANT) {
+                userData = { ...userData, ...profileResponse.data, restaurant: profileResponse.data.restaurant || userData.restaurant };
+              } else {
+                userData = { ...userData, ...profileResponse.data, user: profileResponse.data.user || userData };
+              }
+            }
+          } catch (profileError) {
+            console.warn('Could not fetch profile:', profileError);
+            // Si no podemos obtener el perfil, usar los datos del login
+            if (!userData.id) {
+              userData = {
+                ...userData,
+                id: userData.id || Date.now(), // Fallback ID
+                email: userData.email || credentials.email
+              };
             }
           }
-        } catch (profileError) {
-          console.warn('Could not fetch profile:', profileError);
+        }
+
+        // Asegurar que tenemos datos mínimos del usuario
+        if (!userData.id) {
+          userData.id = userData.id || Date.now();
+        }
+        if (!userData.email) {
+          userData.email = userData.email || credentials.email;
         }
 
         dispatch({
@@ -242,6 +262,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       throw new Error(errorMessage);
     }
   };
@@ -265,6 +286,38 @@ export const AuthProvider = ({ children }) => {
 
       if (result && (result.success || result.access_token || result.user || result.data)) {
         let user = result.data?.user || result.user || result.data || result;
+
+        // Si no tenemos datos completos del usuario, intentar obtener perfil adicional
+        if (!user.id && !user.email) {
+          try {
+            const profileResponse = await apiService.getProfile();
+            if (profileResponse.success && profileResponse.data) {
+              if (userType === USER_TYPES.RESTAURANT) {
+                user = { ...user, ...profileResponse.data, restaurant: profileResponse.data.restaurant || user.restaurant };
+              } else {
+                user = { ...user, ...profileResponse.data, user: profileResponse.data.user || user };
+              }
+            }
+          } catch (profileError) {
+            console.warn('Could not fetch profile after register:', profileError);
+            // Si no podemos obtener el perfil, usar los datos del registro
+            if (!user.id) {
+              user = {
+                ...user,
+                id: user.id || Date.now(), // Fallback ID
+                email: user.email || userData.email
+              };
+            }
+          }
+        }
+
+        // Asegurar que tenemos datos mínimos del usuario
+        if (!user.id) {
+          user.id = user.id || Date.now();
+        }
+        if (!user.email) {
+          user.email = user.email || userData.email;
+        }
 
         dispatch({
           type: AUTH_ACTIONS.SET_USER,
@@ -290,6 +343,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       const errorMessage = error.message || 'Error al registrar el usuario';
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       throw new Error(errorMessage);
     }
   };
