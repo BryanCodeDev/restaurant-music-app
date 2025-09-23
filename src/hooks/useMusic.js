@@ -2,6 +2,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import apiService from '../services/apiService';
 
+// Helper function para formatear duración
+const formatDuration = (ms) => {
+  if (!ms) return '0:00';
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
 export const useMusic = (restaurantSlug) => {
   // Estados principales
   const [songs, setSongs] = useState([]);
@@ -175,7 +183,7 @@ export const useMusic = (restaurantSlug) => {
           title: track.name,
           artist: track.artists[0]?.name || 'Unknown',
           image: track.album?.images[1]?.url,
-          duration: apiService.formatDuration(track.duration_ms),
+          duration: formatDuration(track.duration_ms),
           preview_url: null
         }));
       } else if (response.songs) {

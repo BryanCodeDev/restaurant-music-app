@@ -1,21 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
-  Volume2,
-  VolumeX,
   Heart,
   MoreHorizontal,
-  Shuffle,
-  Repeat,
   Music,
   Clock,
   User,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+  Repeat
 } from 'lucide-react';
+import VolumeControl from '../common/VolumeControl';
+import PlaybackControls from '../common/PlaybackControls';
+
+// Componente simple para icono de Spotify
+const SpotifyIcon = ({ className = '' }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.5 17.4c-.2.3-.6.4-1 .2-2.8-1.7-6.3-2.1-10.4-1.1-.4.1-.8-.1-.9-.5s.1-.8.5-.9c4.4-1.1 8.4-.6 11.6 1.3.4.2.5.7.2 1zm1.5-3.3c-.3.4-.8.5-1.2.2-3.2-2-8.1-2.6-11.8-1.4-.4.1-.9-.1-1-.5s.1-.9.5-1c4.1-1.3 9.3-.7 13 1.6.4.2.5.8.5 1.1zm.1-3.4c-3.8-2.3-10.1-2.5-13.7-1.4-.5.1-1-.2-1.1-.7s.2-1 .7-1.1c4.1-1.3 11.1-1.1 15.4 1.6.4.2.5.8.4 1.2-.1.4-.5.5-.7.4z"/>
+  </svg>
+);
 import apiService from '../../services/apiService';
 
 const MusicPlayer = ({
@@ -101,7 +109,7 @@ const MusicPlayer = ({
           title: state.track_window.current_track.name,
           artist: state.track_window.current_track.artists[0].name,
           image: state.track_window.current_track.album.images[0].url,
-          duration: apiService.formatDuration(state.track_window.current_track.duration_ms),
+          duration: formatTime(state.track_window.current_track.duration_ms / 1000),
           source: 'spotify',
           uri: state.track_window.current_track.uri
         } : null);
@@ -183,12 +191,6 @@ const MusicPlayer = ({
     } else if (onPrevious) onPrevious();
   }, [planType, player, onPrevious]);
 
-  // Play specific song
-  const handlePlaySong = useCallback(async () => {
-    if (onPlaySong && currentSong) {
-      await onPlaySong(currentSong);
-    }
-  }, [onPlaySong, currentSong]);
 
   const parseDuration = (duration) => {
     if (!duration) return 180; // Default 3 minutes
@@ -380,61 +382,17 @@ const MusicPlayer = ({
           </div>
 
           {/* Desktop Controls */}
-          <div className="hidden md:flex items-center justify-center space-x-4 flex-1">
-            <button
-              onClick={() => setIsShuffled(!isShuffled)}
-              className={`p-2 rounded-full transition-colors ${
-                isShuffled
-                  ? 'text-blue-400 bg-blue-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Reproducción aleatoria"
-            >
-              <Shuffle className="h-4 w-4" />
-            </button>
-            
-            <button
-              onClick={handlePrevious}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
-              title="Canción anterior"
-            >
-              <SkipBack className="h-5 w-5" />
-            </button>
-            
-            <button
-              onClick={handlePlayPause}
-              className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/25"
-              title={isPlaying ? 'Pausar' : 'Reproducir'}
-            >
-              {isPlaying ? (
-                <Pause className="h-5 w-5 text-white" />
-              ) : (
-                <Play className="h-5 w-5 text-white ml-0.5" />
-              )}
-            </button>
-            
-            <button
-              onClick={handleNext}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
-              title="Siguiente canción"
-            >
-              <SkipForward className="h-5 w-5" />
-            </button>
-        
-            <button
-              onClick={toggleRepeat}
-              className={`p-2 rounded-full transition-colors relative ${
-                repeatMode !== 'none'
-                  ? 'text-blue-400 bg-blue-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title={`Repetir: ${repeatMode === 'none' ? 'desactivado' : repeatMode === 'one' ? 'una canción' : 'todas'}`}
-            >
-              {getRepeatIcon()}
-              {repeatMode === 'one' && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-400 rounded-full"></span>
-              )}
-            </button>
+          <div className="hidden md:flex items-center justify-center flex-1">
+            <PlaybackControls
+              isPlaying={isPlaying}
+              isShuffled={isShuffled}
+              repeatMode={repeatMode}
+              onPlayPause={handlePlayPause}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
+              onShuffle={() => setIsShuffled(!isShuffled)}
+              onRepeat={toggleRepeat}
+            />
           </div>
         
           {/* Connection status for Pro */}
@@ -482,40 +440,10 @@ const MusicPlayer = ({
             </button>
 
             {/* Volume Control */}
-            <div className="flex items-center space-x-2 relative">
-              <button 
-                onClick={handleVolumeToggle}
-                onMouseEnter={() => setShowVolumeControl(true)}
-                className="p-2 text-slate-400 hover:text-white transition-colors"
-                title={isMuted ? 'Activar sonido' : 'Silenciar'}
-              >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="h-4 w-4" />
-                ) : (
-                  <Volume2 className="h-4 w-4" />
-                )}
-              </button>
-              
-              <div 
-                className={`transition-all duration-300 overflow-hidden ${
-                  showVolumeControl ? 'w-20 opacity-100' : 'w-0 opacity-0'
-                }`}
-                onMouseEnter={() => setShowVolumeControl(true)}
-                onMouseLeave={() => setShowVolumeControl(false)}
-              >
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={isMuted ? 0 : volume}
-                  onChange={(e) => handleVolumeChange(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
-                  style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${volume}%, #374151 ${volume}%, #374151 100%)`
-                  }}
-                />
-              </div>
-            </div>
+            <VolumeControl
+              volume={volume}
+              onVolumeChange={handleVolumeChange}
+            />
 
             <button className="p-2 text-slate-400 hover:text-white transition-colors">
               <MoreHorizontal className="h-4 w-4" />
@@ -621,10 +549,11 @@ const MusicPlayer = ({
           border: none;
         }
       `}</style>
+
+      {/* Audio element for Basic plan */}
+      {audioElement}
     </div>
   );
 };
-
-  // No append needed; <audio> rendered conditionally in JSX
 
 export default MusicPlayer;

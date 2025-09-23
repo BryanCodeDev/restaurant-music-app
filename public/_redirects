@@ -1,0 +1,61 @@
+# BryJu Sound - Netlify Redirects
+# Redirect all requests to index.html for SPA routing
+
+# Main redirect for SPA
+/*    /index.html   200
+
+# API proxy (if needed)
+/api/*  https://api.bryjusound.com/:splat  200
+
+# Security headers
+# /security-headers
+# X-Frame-Options: DENY
+# X-XSS-Protection: 1; mode=block
+# X-Content-Type-Options: nosniff
+# Referrer-Policy: strict-origin-when-cross-origin
+
+# Cache static assets
+/assets/*  3600
+/images/*  3600
+/icons/*   3600
+
+# Cache HTML files for 5 minutes
+/*.html    300
+
+# Don't cache API responses
+/api/*     0
+
+# Redirect old URLs to new ones (if any)
+/old-url    /new-url    301
+/antiguo    /nuevo       301
+
+# Force HTTPS
+https://bryjusound.com/*  https://bryjusound.com/:splat  301!
+
+# Redirect www to non-www
+https://www.bryjusound.com/*  https://bryjusound.com/:splat  301!
+
+# Sitemap and robots.txt
+/sitemap.xml  /sitemap.xml  200
+/robots.txt   /robots.txt   200
+
+# Favicon redirects
+/favicon.ico  /favicon.ico  200
+
+# Apple touch icons
+/apple-touch-icon.png  /apple-touch-icon.png  200
+/apple-touch-icon-precomposed.png  /apple-touch-icon-precomposed.png  200
+
+# Microsoft tiles
+/mstile-150x150.png  /mstile-150x150.png  200
+
+# Block access to sensitive files
+/wp-admin/*  /404.html  404
+/wp-content/*  /404.html  404
+/wp-includes/*  /404.html  404
+/.env*  /404.html  404
+/config/*  /404.html  404
+/admin/*  /404.html  404
+
+# Custom 404 page
+/*    /404.html   404

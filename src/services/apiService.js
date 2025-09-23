@@ -54,7 +54,6 @@ class ApiService {
           errorMessage = 'El email ya está registrado. ¿Iniciar sesión?';
         }
         
-        const error = { ...responseData, message: errorMessage };
         throw new Error(errorMessage);
       }
 
@@ -76,18 +75,16 @@ class ApiService {
   }
 
   // ===== AUTHENTICATION =====
-  
-  // Restaurant Auth
-  async registerRestaurant(data) {
-    const response = await this.request('/auth/register-restaurant', {
-      method: 'POST',
-      body: data
-    });
-    
+
+  // Generic auth handler to reduce duplication
+  async _handleAuthResponse(response, userType = null) {
     if (response.success && response.data?.access_token) {
       localStorage.setItem('auth_token', response.data.access_token);
       if (response.data.refresh_token) {
         localStorage.setItem('refresh_token', response.data.refresh_token);
+      }
+      if (userType) {
+        localStorage.setItem('user_type', userType);
       }
       return response.data;
     } else if (response.access_token) {
@@ -95,9 +92,20 @@ class ApiService {
       if (response.refresh_token) {
         localStorage.setItem('refresh_token', response.refresh_token);
       }
+      if (userType) {
+        localStorage.setItem('user_type', userType);
+      }
     }
-    
     return response;
+  }
+
+  // Restaurant Auth
+  async registerRestaurant(data) {
+    const response = await this.request('/auth/register-restaurant', {
+      method: 'POST',
+      body: data
+    });
+    return this._handleAuthResponse(response);
   }
 
   async loginRestaurant(email, password) {
@@ -105,21 +113,7 @@ class ApiService {
       method: 'POST',
       body: { email, password }
     });
-    
-    if (response.success && response.data?.access_token) {
-      localStorage.setItem('auth_token', response.data.access_token);
-      if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-      }
-      return response.data;
-    } else if (response.access_token) {
-      localStorage.setItem('auth_token', response.access_token);
-      if (response.refresh_token) {
-        localStorage.setItem('refresh_token', response.refresh_token);
-      }
-    }
-    
-    return response;
+    return this._handleAuthResponse(response);
   }
 
   // User Auth (Registered Users)
@@ -128,23 +122,7 @@ class ApiService {
       method: 'POST',
       body: data
     });
-    
-    if (response.success && response.data?.access_token) {
-      localStorage.setItem('auth_token', response.data.access_token);
-      localStorage.setItem('user_type', 'registered');
-      if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-      }
-      return response.data;
-    } else if (response.access_token) {
-      localStorage.setItem('auth_token', response.access_token);
-      localStorage.setItem('user_type', 'registered');
-      if (response.refresh_token) {
-        localStorage.setItem('refresh_token', response.refresh_token);
-      }
-    }
-    
-    return response;
+    return this._handleAuthResponse(response, 'registered');
   }
 
   async loginUser(email, password) {
@@ -152,23 +130,7 @@ class ApiService {
       method: 'POST',
       body: { email, password }
     });
-    
-    if (response.success && response.data?.access_token) {
-      localStorage.setItem('auth_token', response.data.access_token);
-      localStorage.setItem('user_type', 'registered');
-      if (response.data.refresh_token) {
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-      }
-      return response.data;
-    } else if (response.access_token) {
-      localStorage.setItem('auth_token', response.access_token);
-      localStorage.setItem('user_type', 'registered');
-      if (response.refresh_token) {
-        localStorage.setItem('refresh_token', response.refresh_token);
-      }
-    }
-    
-    return response;
+    return this._handleAuthResponse(response, 'registered');
   }
 
   async getUserProfile() {
@@ -734,13 +696,14 @@ class ApiService {
     return response.success ? response.data : response;
   }
 
-  // Helper para formatear duración Spotify (ms a mm:ss)
-  formatDuration(ms) {
-    if (!ms) return '0:00';
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
+}
+
+// Helper para formatear duración Spotify (ms a mm:ss)
+function formatDuration(ms) {
+  if (!ms) return '0:00';
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 export default new ApiService();

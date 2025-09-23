@@ -1,5 +1,6 @@
 import React from 'react';
-import { Play, Heart, Clock, User, Star, Disc3 } from 'lucide-react';
+import { Play, Heart, Clock, User, Star, Disc3, Music } from 'lucide-react';
+import apiService from '../../services/apiService';
 
 const SongCard = ({
   song,
@@ -23,6 +24,13 @@ const SongCard = ({
     if (popularity >= 75) return 'text-blue-400 bg-blue-500/20';
     if (popularity >= 60) return 'text-yellow-400 bg-yellow-500/20';
     return 'text-slate-400 bg-slate-500/20';
+  };
+
+  const formatDuration = (durationMs) => {
+    if (!durationMs) return '0:00';
+    const minutes = Math.floor(durationMs / 60000);
+    const seconds = Math.floor((durationMs % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -57,7 +65,7 @@ const SongCard = ({
           {/* Source Badge */}
           {source === 'spotify' && (
             <div className="absolute top-3 left-3 bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-1 rounded-full text-xs font-medium">
-              <Spotify className="h-3 w-3 inline mr-1" />
+              <Music className="h-3 w-3 inline mr-1" />
               Spotify
             </div>
           )}
@@ -81,7 +89,7 @@ const SongCard = ({
         <div className="flex items-center justify-between text-xs text-slate-500">
           <div className="flex items-center space-x-1">
             <Clock className="h-3 w-3" />
-            <span>{song.duration || song.duration_ms ? apiService.formatDuration(song.duration_ms) : '0:00'}</span>
+            <span>{song.duration || formatDuration(song.duration_ms)}</span>
           </div>
           <div className="flex items-center space-x-1">
             <Disc3 className="h-3 w-3" />

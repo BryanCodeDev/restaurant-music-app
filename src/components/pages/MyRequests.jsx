@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  Play, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Clock,
+  Play,
+  CheckCircle,
+  XCircle,
   Trash2,
   Music,
   Calendar,
   User,
   AlertCircle
 } from 'lucide-react';
+import apiService from '../../services/apiService';
 
 const MyRequests = ({ userSession, onCancelRequest, restaurantSlug }) => {
   const [localRequests, setLocalRequests] = useState([]);

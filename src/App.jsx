@@ -113,6 +113,33 @@ function App() {
     setCurrentView('home');
   };
 
+  const handleAdminLogout = () => {
+    handleLogout();
+    switchToCustomerMode();
+  };
+
+  const handleToggleFavorite = async (song) => {
+    if (restaurantMusic?.toggleFavorite) {
+      try {
+        await restaurantMusic.toggleFavorite(song);
+      } catch (error) {
+        console.error('Error toggling favorite:', error);
+      }
+    }
+  };
+
+  const handlePlaySong = async (song) => {
+    if (restaurantMusic?.addRequest) {
+      try {
+        await restaurantMusic.addRequest(song);
+        setCurrentSong(song);
+        setIsPlaying(true);
+      } catch (error) {
+        console.error('Error playing song:', error);
+      }
+    }
+  };
+
   const handleEditProfile = () => {
     setCurrentView('edit-profile');
   };
@@ -470,11 +497,12 @@ function App() {
             onNext={handleNext}
             onPrevious={handlePrevious}
             onVolumeChange={handleVolumeChange}
-            onToggleFavorite={safeRestaurantMusic.toggleFavorite}
+            onToggleFavorite={handleToggleFavorite}
             isFavorite={safeRestaurantMusic.favorites?.some(fav => fav.id === currentSong.id)}
             planType={restaurantMusic?.planType || 'basic'}
             spotifyConnected={restaurantMusic?.spotifyConnected || false}
             restaurantSlug={selectedRestaurant.slug}
+            onPlaySong={handlePlaySong}
           />
         )}
 

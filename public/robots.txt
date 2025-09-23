@@ -1,0 +1,88 @@
+# BryJu Sound - Robots.txt
+# https://bryjusound.com/robots.txt
+
+# Permitir todos los bots principales
+User-agent: *
+Allow: /
+
+# Archivos específicos permitidos
+Allow: /sitemap.xml
+Allow: /manifest.json
+Allow: /favicon.ico
+Allow: /assets/
+Allow: /images/
+Allow: /icons/
+
+# Disallow sensitive areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+Disallow: /config/
+Disallow: /src/
+Disallow: /node_modules/
+Disallow: /*.json$
+Disallow: /*.log$
+Disallow: /_headers
+Disallow: /_redirects
+Disallow: /netlify.toml
+
+# Bloquear bots maliciosos conocidos
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+# Sitemap location
+Sitemap: https://bryjusound.com/sitemap.xml
+
+# Crawl delay para ser amigables con el servidor
+Crawl-delay: 1
+
+# Políticas específicas para diferentes bots
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0.5
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: facebookexternalhit
+Allow: /
+Crawl-delay: 0
+
+User-agent: Twitterbot
+Allow: /
+Crawl-delay: 0
+
+# Bloquear bots de scraping agresivos
+User-agent: *
+Disallow: /wp-admin/
+Disallow: /wp-content/
+Disallow: /wp-includes/
+Disallow: /.env*
+Disallow: /config/*
+Disallow: /*.sql$
+Disallow: /*.bak$
+
+# Políticas para imágenes
+User-agent: Googlebot-Image
+Allow: /images/
+Allow: /assets/
+Allow: /icons/
+Disallow: /src/
+
+# Políticas para mobile
+User-agent: Googlebot-Mobile
+Allow: /
+Crawl-delay: 0.5
+
+# Políticas para news
+User-agent: Googlebot-News
+Allow: /blog/
+Allow: /noticias/
+Disallow: /admin/

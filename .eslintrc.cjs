@@ -3,7 +3,6 @@ module.exports = {
   env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react/jsx-runtime',
     'plugin:react-hooks/recommended',
@@ -18,7 +17,7 @@ module.exports = {
       { allowConstantExport: true },
     ],
     'react/prop-types': 'off', // Si no usas PropTypes
-    'no-unused-vars': 'warn',
+    'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     'no-console': 'warn',
   },
 }

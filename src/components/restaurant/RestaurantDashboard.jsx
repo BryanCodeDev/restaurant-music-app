@@ -246,7 +246,7 @@ const RestaurantDashboard = ({ restaurant, requests = [], currentSong, onLogout,
                 onVolumeChange={onVolumeChange}
                 onToggleFavorite={() => {/* implement */ }}
                 isFavorite={false}
-                planType="basic"
+                planType="starter"
                 spotifyConnected={false}
                 restaurantSlug={restaurant.slug}
               />

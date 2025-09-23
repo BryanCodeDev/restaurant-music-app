@@ -660,9 +660,9 @@ const AdminRegister = ({ onRegister, onSwitchToLogin, onSwitchToCustomer, onBack
                         onChange={(e) => setApproveForm({...approveForm, plan: e.target.value})}
                         className="w-full p-2 bg-slate-700 border border-slate-600 rounded text-white"
                       >
-                        <option value="starter">Starter</option>
-                        <option value="professional">Professional</option>
-                        <option value="enterprise">Enterprise</option>
+                        <option value="starter">Starter - $80.000/mes</option>
+                        <option value="professional">Professional - $120.000/mes</option>
+                        <option value="enterprise">Enterprise - $300.000/mes</option>
                       </select>
                       <input
                         type="file"

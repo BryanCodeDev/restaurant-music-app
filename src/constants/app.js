@@ -12,8 +12,9 @@ export const APP_MODES = {
 };
 
 export const PLAN_TYPES = {
-  BASIC: 'basic',
-  PRO: 'pro'
+  STARTER: 'starter',
+  PROFESSIONAL: 'professional',
+  ENTERPRISE: 'enterprise'
 };
 
 export const REQUEST_STATUS = {
@@ -89,4 +90,32 @@ export const BRAND_INFO = {
   NAME: 'BryJu Sound',
   TAGLINE: 'La música perfecta para tu restaurante',
   DESCRIPTION: 'Sistema SaaS para gestión musical en restaurantes con integración Spotify'
+};
+
+export const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  PENDING: 'pending',
+  CANCELLED: 'cancelled'
+};
+
+export const SUBSCRIPTION_TYPES = {
+  NEW: 'new',
+  RENEWAL: 'renewal',
+  PENDING: 'pending',
+  UPGRADE: 'upgrade'
+};
+
+export const PAYMENT_METHODS = {
+  QR: 'qr',
+  TRANSFER: 'transfer',
+  CARD: 'card'
+};
+
+export const SUBSCRIPTION_STEPS = {
+  PLAN_SELECTION: 1,
+  AUTHENTICATION: 2,
+  USER_INFO: 3,
+  PAYMENT: 4,
+  CONFIRMATION: 5
 };

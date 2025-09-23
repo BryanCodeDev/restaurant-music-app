@@ -1,20 +1,124 @@
 {
-  "name": "BryJu Sound - Música Interactiva para Restaurantes",
+  "name": "BryJu Sound - Música Interactiva para Restaurantes en Colombia",
   "short_name": "BryJu Sound",
-  "description": "Plataforma líder de música interactiva para restaurantes en Colombia",
+  "description": "🎵 La plataforma #1 de música interactiva para restaurantes. Tus clientes solicitan canciones en tiempo real vía Spotify o biblioteca propia.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "background_color": "#1a1a2e",
   "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
-  "categories": ["music", "business", "entertainment"],
+  "categories": ["music", "business", "entertainment", "productivity"],
   "lang": "es-CO",
   "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "BryJu Sound - Dashboard principal"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "375x812",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "BryJu Sound - Versión móvil"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard Restaurante",
+      "short_name": "Dashboard",
+      "description": "Accede rápidamente a tu panel de control",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/dashboard-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Música",
+      "short_name": "Música",
+      "description": "Explora y busca canciones",
+      "url": "/musica",
+      "icons": [
+        {
+          "src": "/icons/music-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
     {
       "src": "/favicon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     }
-  ]
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "protocol_handlers": []
 }
