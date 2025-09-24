@@ -324,33 +324,7 @@ const SubscriptionPage = () => {
           </div>
         )}
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="mb-8 p-8 bg-slate-800/40 border border-slate-700/50 rounded-xl text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-500/20 rounded-full mb-4">
-              <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-slate-300 font-medium">Procesando...</p>
-              <div className="flex items-center justify-center space-x-1 text-sm text-slate-400">
-                <Clock className="h-4 w-4" />
-                <span>Esto puede tomar unos momentos</span>
-              </div>
-              {retryCount > 0 && (
-                <p className="text-xs text-slate-500">
-                  Intento #{retryCount + 1}
-                </p>
-              )}
-            </div>
-
-            {/* Skeleton loading para mejor UX */}
-            <div className="mt-6 space-y-4">
-              <div className="h-4 bg-slate-700/50 rounded animate-pulse"></div>
-              <div className="h-4 bg-slate-700/50 rounded animate-pulse w-3/4 mx-auto"></div>
-              <div className="h-4 bg-slate-700/50 rounded animate-pulse w-1/2 mx-auto"></div>
-            </div>
-          </div>
-        )}
+        {/* Loading eliminado - mostrar directamente el contenido */}
 
         {/* Content based on plan type */}
         {planType === SUBSCRIPTION_TYPES.PENDING ? (

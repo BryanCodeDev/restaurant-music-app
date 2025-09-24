@@ -88,9 +88,7 @@ const PlaylistManager = ({ userId, restaurantSlug }) => {
     }
   };
 
-  if (loading) {
-    return <div className="text-center p-8">Cargando playlists...</div>;
-  }
+  // Loading eliminado - mostrar directamente el contenido
 
   return (
     <div className="p-6 max-w-6xl mx-auto">

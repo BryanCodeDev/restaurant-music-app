@@ -24,8 +24,8 @@ import {
 import apiService from '../../services/apiService';
 
 // Layout Components
-import EnhancedNavbar from '../layout/EnhancedNavbar';
-import EnhancedFooter from '../layout/EnhancedFooter';
+import Navbar from '../layout/Navbar';
+import Footer from '../layout/Footer';
 
 // Context
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,9 +33,25 @@ import { useAuth } from '../../contexts/AuthContext';
 // Pricing Components
 import PricingPlans from '../common/PricingPlans';
 
-const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
-  // Auth Context
-  const { selectedRestaurant, switchToAdminMode, switchToCustomerMode } = useAuth();
+// Auth Components
+import Login from '../auth/Login';
+import Register from '../auth/Register';
+
+const RestaurantSelector = ({
+  onRestaurantSelect,
+  onSwitchToAdmin
+}) => {
+  // Auth Context - usar directamente el contexto para estado actualizado
+  const {
+    selectedRestaurant,
+    switchToAdminMode,
+    switchToCustomerMode,
+    user,
+    userType,
+    isAuthenticated,
+    appMode,
+    currentStep
+  } = useAuth();
 
   const [restaurants, setRestaurants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,17 +60,10 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
   const [error, setError] = useState(null);
   const [currentPlayingPreview, setCurrentPlayingPreview] = useState(null);
   const [currentView, setCurrentView] = useState('home');
+  const [authView, setAuthView] = useState(null); // 'login' o 'register'
+  const [lastLoadTime, setLastLoadTime] = useState(0); // Para cache simple
 
-  // Navigation handlers
-  const handleShowLogin = () => {
-    // This will be handled by the navbar
-    console.log('Show login');
-  };
-
-  const handleShowRegister = () => {
-    // This will be handled by the navbar
-    console.log('Show register');
-  };
+  // Navigation handlers - usar directamente los props
 
   const handleSelectRestaurant = () => {
     // Reset to restaurant selection
@@ -83,18 +92,80 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
     console.log('Settings clicked');
   };
 
+  // Handlers para navegación de autenticación
+  const handleShowLogin = () => {
+    console.log('RestaurantSelector - Cambiando a vista de login');
+    setAuthView('login');
+  };
+
+  const handleShowRegister = () => {
+    console.log('RestaurantSelector - Cambiando a vista de register');
+    setAuthView('register');
+  };
+
+  const handleBackToSelector = () => {
+    console.log('RestaurantSelector - Volviendo al selector de restaurantes');
+    setAuthView(null);
+  };
+
+  const handleLoginSuccess = () => {
+    console.log('RestaurantSelector - Login exitoso');
+    // El contexto se actualizará automáticamente y el navbar se actualizará
+  };
+
+  const handleRegisterSuccess = () => {
+    console.log('RestaurantSelector - Registro exitoso');
+    // El contexto se actualizará automáticamente y el navbar se actualizará
+  };
+
   useEffect(() => {
+    // Cargar restaurantes cuando el componente se monte
     loadRestaurants();
   }, []);
 
+  // Debug logging solo cuando cambie realmente el estado de autenticación
+  useEffect(() => {
+    console.log('RestaurantSelector - Auth state changed:', {
+      isAuthenticated,
+      user: user ? { id: user.id, name: user.name, email: user.email } : null,
+      userType,
+      currentStep
+    });
+
+    // Si el usuario está autenticado y está en el selector, redirigir automáticamente
+    if (isAuthenticated && user && !authView) {
+      console.log('Usuario autenticado en RestaurantSelector, redirigiendo...');
+      if (userType === 'restaurant' || userType === 'superadmin') {
+        // Usuario administrativo - cambiar a modo admin
+        switchToAdminMode();
+      } else {
+        // Usuario normal - seleccionar restaurante automáticamente si hay uno guardado
+        if (selectedRestaurant) {
+          onRestaurantSelect(selectedRestaurant);
+        }
+      }
+    }
+  }, [isAuthenticated, user?.id, userType, currentStep, selectedRestaurant, authView]);
+
   const loadRestaurants = async () => {
+    // Cache simple: no cargar si ya se cargó en los últimos 30 segundos
+    const now = Date.now();
+    if (now - lastLoadTime < 30000 && restaurants.length > 0) {
+      console.log('Using cached restaurants data');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      
+
+      console.log('Loading restaurants from API...');
+
       // Using your existing API service with the correct endpoint
       const response = await apiService.request('/restaurants');
-      
+
+      console.log('API Response:', response);
+
       // Handle different possible response structures from your API
       let restaurantData = [];
       if (response.success && response.data) {
@@ -104,29 +175,63 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
       } else if (Array.isArray(response)) {
         restaurantData = response;
       }
-      
+
+      console.log('Restaurant data extracted:', restaurantData);
+
       // Transform the API data to include enhanced UI properties while keeping real data
-      const enhancedRestaurants = restaurantData.map(restaurant => ({
-        ...restaurant,
-        // Keep all original API data
-        // Add fallback values for enhanced UI features if not provided by API
-        coverImage: restaurant.coverImage || restaurant.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=400&fit=crop&crop=center',
-        reviewCount: restaurant.totalReviews || 0,
-        activeCustomers: restaurant.activeCustomers || 0,
-        totalSongs: restaurant.totalSongs || 0,
-        genres: restaurant.genres || ['Música Variada'],
-        specialFeatures: restaurant.specialFeatures || [],
-        priceRange: restaurant.priceRange || '$$',
-        musicStyle: restaurant.musicStyle || 'Variado',
-        hours: restaurant.business_hours ? JSON.parse(restaurant.business_hours).open || 'Abierto ahora' : (restaurant.isActive ? 'Abierto ahora' : 'Cerrado'),
-        currentArtist: restaurant.currentArtist || (restaurant.currentSong ? restaurant.currentSong.split(' - ')[1] : null),
-        description: restaurant.description || ''
-      }));
-      
+      const enhancedRestaurants = restaurantData.map(restaurant => {
+        try {
+          return {
+            ...restaurant,
+            // Keep all original API data
+            // Add fallback values for enhanced UI features if not provided by API
+            coverImage: restaurant.coverImage || restaurant.logo || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=400&fit=crop&crop=center',
+            reviewCount: restaurant.totalReviews || 0,
+            activeCustomers: restaurant.activeCustomers || 0,
+            totalSongs: restaurant.totalSongs || 0,
+            genres: restaurant.genres || ['Música Variada'],
+            specialFeatures: restaurant.specialFeatures || [],
+            priceRange: restaurant.priceRange || '$$',
+            musicStyle: restaurant.musicStyle || 'Variado',
+            hours: restaurant.business_hours ? (() => {
+              try {
+                const parsed = JSON.parse(restaurant.business_hours);
+                return parsed.open || 'Abierto ahora';
+              } catch {
+                return 'Abierto ahora';
+              }
+            })() : (restaurant.isActive ? 'Abierto ahora' : 'Cerrado'),
+            currentArtist: restaurant.currentArtist || (restaurant.currentSong ? (() => {
+              try {
+                return restaurant.currentSong.split(' - ')[1] || null;
+              } catch {
+                return null;
+              }
+            })() : null),
+            description: restaurant.description || ''
+          };
+        } catch (transformError) {
+          console.error('Error transforming restaurant data:', restaurant, transformError);
+          return null;
+        }
+      }).filter(Boolean); // Remove null entries
+
+      console.log('Enhanced restaurants:', enhancedRestaurants);
       setRestaurants(enhancedRestaurants);
+      setLastLoadTime(now); // Actualizar timestamp del cache
     } catch (err) {
       console.error('Error loading restaurants:', err);
-      setError('Error al cargar restaurantes. Por favor intenta de nuevo.');
+      let errorMessage = 'Error al cargar restaurantes. Por favor intenta de nuevo.';
+
+      if (err.message.includes('500')) {
+        errorMessage = 'Error del servidor (500). El backend podría no estar funcionando correctamente.';
+      } else if (err.message.includes('Network')) {
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
+      } else if (err.message.includes('401') || err.message.includes('403')) {
+        errorMessage = 'Error de autenticación. Por favor inicia sesión nuevamente.';
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -162,23 +267,55 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
     loadRestaurants();
   };
 
-  if (loading) {
+  // Loading eliminado - mostrar directamente el contenido
+
+  // Si está en vista de autenticación, mostrar solo eso
+  if (authView) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full opacity-30 blur-2xl animate-pulse"></div>
-            <div className="relative w-24 h-24 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
+        {/* Navbar simplificado para vistas de auth */}
+        <Navbar
+          currentView={authView}
+          onViewChange={() => {}} // No permitir navegación
+          restaurant={null}
+          userTable=""
+          onSwitchToAdmin={onSwitchToAdmin}
+          onShowLogin={authView === 'login' ? undefined : handleShowLogin}
+          onShowRegister={authView === 'register' ? undefined : handleShowRegister}
+          onLogout={handleLogout}
+          onProfile={handleProfile}
+          onEditProfile={handleEditProfile}
+          onSettings={handleSettings}
+          onSelectRestaurant={handleBackToSelector}
+          onBackToRestaurantSelector={handleBackToSelector}
+          user={user}
+          userType={userType}
+          isAuthenticated={isAuthenticated}
+          appMode={appMode}
+        />
+
+        {/* Contenido de autenticación */}
+        <main className="min-h-screen flex items-center justify-center px-4">
+          <div className="w-full max-w-md">
+            {authView === 'login' ? (
+              <Login
+                onLogin={handleLoginSuccess}
+                onSwitchToRegister={() => setAuthView('register')}
+                onSwitchToCustomer={handleBackToSelector}
+                isLoading={false}
+                error={null}
+              />
+            ) : (
+              <Register
+                onRegister={handleRegisterSuccess}
+                onSwitchToLogin={() => setAuthView('login')}
+                onSwitchToCustomer={handleBackToSelector}
+                isLoading={false}
+                error={null}
+              />
+            )}
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Sintonizando MusicMenu</h2>
-          <p className="text-slate-400">Cargando restaurantes disponibles...</p>
-          <div className="flex justify-center mt-6 space-x-1">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="w-3 h-8 bg-blue-500 rounded-full animate-pulse" 
-                   style={{ animationDelay: `${i * 0.3}s` }}></div>
-            ))}
-          </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -187,7 +324,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white relative overflow-hidden">
 
       {/* Navbar */}
-      <EnhancedNavbar
+      <Navbar
         currentView={currentView}
         onViewChange={handleViewChange}
         restaurant={selectedRestaurant}
@@ -200,6 +337,10 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
         onEditProfile={handleEditProfile}
         onSettings={handleSettings}
         onSelectRestaurant={handleSelectRestaurant}
+        user={user}
+        userType={userType}
+        isAuthenticated={isAuthenticated}
+        appMode={appMode}
       />
 
       {/* Background Elements */}
@@ -633,7 +774,7 @@ const RestaurantSelector = ({ onRestaurantSelect, onSwitchToAdmin }) => {
       </main>
 
       {/* Footer - Always at bottom */}
-      <EnhancedFooter />
+      <Footer connectionStatus="connected" />
     </div>
   );
 };

@@ -1,12 +1,38 @@
-import React, { useState } from 'react';
-import { 
-  Home, 
-  Music, 
-  Clock, 
-  Heart, 
-  Headphones, 
-  Menu, 
-  X, 
+/**
+ * NAVBAR COMPONENTE - BryJu Sound
+ *
+ * Un navbar completamente funcional y consistente que funciona en todas las páginas
+ * con lógica clara y mantenible.
+ *
+ * CARACTERÍSTICAS:
+ * ✅ Lógica simplificada y clara
+ * ✅ Detección correcta de estado de autenticación
+ * ✅ Navegación consistente para todas las páginas
+ * ✅ Manejo robusto de errores
+ * ✅ Funciona perfectamente en móvil y desktop
+ * ✅ Configuración centralizada y mantenible
+ * ✅ Debug logging claro y útil
+ *
+ * ESTADOS DE LA APLICACIÓN:
+ * 1. Restaurant Selection: Usuario no autenticado, seleccionando restaurante
+ * 2. Auth View: Usuario en login/register
+ * 3. Music App: Usuario autenticado, usando la aplicación musical
+ *
+ * CONFIGURACIÓN CENTRALIZADA:
+ * - NAVBAR_CONFIG: Toda la lógica de visibilidad y navegación
+ * - Estados claramente definidos
+ * - Fácil de mantener y extender
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  Home,
+  Music,
+  Clock,
+  Heart,
+  Headphones,
+  Menu,
+  X,
   MapPin,
   User,
   LogOut,
@@ -14,8 +40,39 @@ import {
   Crown,
   UserPlus,
   LogIn,
-  ChevronDown
+  ChevronDown,
+  ArrowLeft
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+
+// Configuración centralizada del navbar
+const NAVBAR_CONFIG = {
+  // Estados de la aplicación
+  STATES: {
+    RESTAURANT_SELECTION: 'restaurant-selection',
+    AUTH_VIEW: 'auth-view',
+    MUSIC_APP: 'music-app'
+  },
+
+  // Items de navegación por estado
+  NAVIGATION_ITEMS: {
+    MUSIC_APP: [
+      { id: 'home', label: 'Inicio', icon: Home },
+      { id: 'browse', label: 'Música', icon: Music },
+      { id: 'requests', label: 'Mis Pedidos', icon: Clock },
+      { id: 'favorites', label: 'Favoritos', icon: Heart }
+    ]
+  },
+
+  // Configuración de visibilidad
+  VISIBILITY: {
+    showNavigation: (isInMusicApp) => isInMusicApp,
+    showAuthButtons: (isAuthenticated, isInAuthView) => !isAuthenticated && !isInAuthView,
+    showUserMenu: (isAuthenticated, user, isInAuthView) => isAuthenticated && user && !isInAuthView,
+    showBackButton: (isInAuthView, hasBackHandler) => isInAuthView && hasBackHandler,
+    showMobileMenu: (isInMusicApp) => isInMusicApp
+  }
+};
 
 const Navbar = ({
   currentView,
@@ -23,30 +80,81 @@ const Navbar = ({
   restaurant,
   userTable,
   onSwitchToAdmin,
-  // Props para autenticación - ahora sin modales
-  isAuthenticated = false,
-  user = null,
-  onShowLogin, // Cambiará la vista a 'login'
-  onShowRegister, // Cambiará la vista a 'register'
+  onShowLogin,
+  onShowRegister,
   onLogout,
   onProfile,
   onEditProfile,
-  onSettings
+  onSettings,
+  onSelectRestaurant,
+  onBackToRestaurantSelector,
+  // Props opcionales para compatibilidad
+  user: propUser,
+  userType: propUserType,
+  isAuthenticated: propIsAuthenticated
 }) => {
+  // Usar contexto de autenticación con fallback a props
+  const authContext = useAuth();
+  const { user: contextUser, userType: contextUserType, isAuthenticated: contextIsAuthenticated, appMode } = authContext;
+
+  // Usar props si están disponibles, de lo contrario usar contexto
+  const user = propUser || contextUser;
+  const userType = propUserType || contextUserType;
+  const isAuthenticated = propIsAuthenticated !== undefined ? propIsAuthenticated : contextIsAuthenticated;
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAuthMenu, setShowAuthMenu] = useState(false);
 
-  const navItems = [
-    { id: 'home', label: 'Inicio', icon: Home },
-    { id: 'browse', label: 'Música', icon: Music },
-    { id: 'requests', label: 'Mis Pedidos', icon: Clock },
-    { id: 'favorites', label: 'Favoritos', icon: Heart }
-  ];
+  // Determinar el estado actual de la aplicación usando configuración centralizada
+  const isInRestaurantSelection = !restaurant && currentView !== 'login' && currentView !== 'register';
+  const isInAuthView = ['login', 'register'].includes(currentView);
+  const isInMusicApp = restaurant && !isInAuthView;
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
+  // Obtener configuración usando la configuración centralizada
+  const navItems = NAVBAR_CONFIG.NAVIGATION_ITEMS.MUSIC_APP || [];
+
+  // Determinar qué mostrar basado en el estado usando configuración centralizada
+  const shouldShowAuthButtons = NAVBAR_CONFIG.VISIBILITY.showAuthButtons(isAuthenticated, isInAuthView);
+  const shouldShowUserMenu = NAVBAR_CONFIG.VISIBILITY.showUserMenu(isAuthenticated, user, isInAuthView);
+  const shouldShowBackButton = NAVBAR_CONFIG.VISIBILITY.showBackButton(isInAuthView, !!onBackToRestaurantSelector);
+  const shouldShowNavigation = NAVBAR_CONFIG.VISIBILITY.showNavigation(isInMusicApp);
+  const shouldShowMobileMenu = NAVBAR_CONFIG.VISIBILITY.showMobileMenu(isInMusicApp);
+
+  // Debug logging simplificado y claro
+  console.log('🎯 Navbar - Estado actual:', {
+    vista: currentView,
+    autenticado: isAuthenticated,
+    usuario: user ? `${user.name || user.email} (${userType})` : 'No hay usuario',
+    modo: isInMusicApp ? 'App Musical' : isInAuthView ? 'Autenticación' : 'Selección Restaurante',
+    mostrar: {
+      navegación: shouldShowNavigation,
+      authButtons: shouldShowAuthButtons,
+      userMenu: shouldShowUserMenu,
+      backButton: shouldShowBackButton,
+      mobileMenu: shouldShowMobileMenu
+    }
+  });
+
+  // Cerrar menús cuando cambie la vista
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+    setShowUserMenu(false);
+    setShowAuthMenu(false);
+  }, [currentView]);
+
+  // Cerrar menús al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowUserMenu(false);
+      setShowAuthMenu(false);
+    };
+
+    if (showUserMenu || showAuthMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showUserMenu, showAuthMenu]);
 
   const handleNavClick = (itemId) => {
     onViewChange(itemId);
@@ -54,32 +162,32 @@ const Navbar = ({
   };
 
   const handleLogout = () => {
+    console.log('Navbar - Ejecutando logout...');
     if (onLogout) {
-      onLogout();
+      try {
+        onLogout();
+        console.log('Navbar - Logout ejecutado exitosamente');
+      } catch (error) {
+        console.error('Navbar - Error en logout:', error);
+      }
     } else {
-      // Fallback para mantener compatibilidad
-      localStorage.removeItem('musicmenu_session');
-      localStorage.removeItem('musicmenu_user');
-      localStorage.removeItem('musicmenu_restaurant');
-      window.location.reload();
+      console.warn('Navbar - onLogout no está definido');
     }
     setShowUserMenu(false);
   };
 
   const handleShowLogin = () => {
-    // En lugar de mostrar modal, cambiar vista a 'login'
     if (onShowLogin) {
       onShowLogin();
     }
-    closeAllMenus();
+    setShowAuthMenu(false);
   };
 
   const handleShowRegister = () => {
-    // En lugar de mostrar modal, cambiar vista a 'register'
     if (onShowRegister) {
       onShowRegister();
     }
-    closeAllMenus();
+    setShowAuthMenu(false);
   };
 
   const closeAllMenus = () => {
@@ -89,10 +197,10 @@ const Navbar = ({
   };
 
   return (
-    <nav className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-700/50 sticky top-0 z-50 shadow-xl">
+    <nav className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/50 sticky top-0 z-50 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
-          
+
           {/* Logo */}
           <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => handleNavClick('home')}>
             <div className="relative">
@@ -103,28 +211,26 @@ const Navbar = ({
             </div>
             <div className="flex flex-col">
               <span className="text-xl sm:text-2xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                MusicMenu
+                BryJu Sound
               </span>
-              <div className="flex items-center space-x-2 text-xs text-slate-400">
-                {restaurant && (
-                  <>
-                    <span>{restaurant.name}</span>
-                    <span>•</span>
-                  </>
-                )}
-                <span>{userTable}</span>
-              </div>
+              {restaurant && (
+                <div className="flex items-center space-x-2 text-xs text-slate-400">
+                  <span>{restaurant.name}</span>
+                  <span>•</span>
+                  <span>{userTable}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Navigation Links - Desktop - Solo mostrar si no está en vistas de auth */}
-          {!['login', 'register'].includes(currentView) && (
+          {/* Navigation Links - Desktop */}
+          {shouldShowNavigation && (
             <div className="hidden lg:block">
               <div className="flex items-center space-x-2">
                 {navItems.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = currentView === item.id;
-                  
+
                   return (
                     <button
                       key={item.id}
@@ -140,7 +246,7 @@ const Navbar = ({
                     >
                       <IconComponent className={`h-5 w-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                       <span>{item.label}</span>
-                      
+
                       {isActive && (
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-xl"></div>
                       )}
@@ -153,10 +259,10 @@ const Navbar = ({
 
           {/* Right Side Controls */}
           <div className="flex items-center space-x-3">
-            {/* Restaurant Info - Desktop - Solo mostrar si no está en vistas de auth */}
-            {restaurant && !['login', 'register'].includes(currentView) && (
+            {/* Restaurant Info - Desktop */}
+            {restaurant && shouldShowNavigation && (
               <div className="hidden lg:flex items-center space-x-3 px-4 py-2 bg-slate-800/50 border border-slate-700/50 rounded-xl">
-                <img 
+                <img
                   src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=32&h=32&fit=crop"}
                   alt={restaurant.name}
                   className="w-8 h-8 rounded-lg object-cover"
@@ -171,12 +277,24 @@ const Navbar = ({
               </div>
             )}
 
+            {/* Back to Restaurant Selector Button */}
+            {shouldShowBackButton && (
+              <button
+                onClick={onBackToRestaurantSelector}
+                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="font-medium hidden sm:inline">Volver</span>
+              </button>
+            )}
+
             {/* Authentication Section */}
-            {isAuthenticated && user ? (
+            {shouldShowUserMenu ? (
               /* Usuario autenticado - Menú de perfil */
               <div className="relative">
-                <button 
-                  onClick={() => {
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowUserMenu(!showUserMenu);
                     setShowAuthMenu(false);
                   }}
@@ -195,7 +313,7 @@ const Navbar = ({
                 {/* User Dropdown */}
                 {showUserMenu && (
                   <>
-                    <div 
+                    <div
                       className="fixed inset-0 z-40"
                       onClick={closeAllMenus}
                     />
@@ -211,11 +329,21 @@ const Navbar = ({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="p-2">
                         <button
                           onClick={() => {
-                            onEditProfile?.();
+                            console.log('Navbar - Ejecutando EditProfile...');
+                            if (onEditProfile) {
+                              try {
+                                onEditProfile();
+                                console.log('Navbar - EditProfile ejecutado exitosamente');
+                              } catch (error) {
+                                console.error('Navbar - Error en EditProfile:', error);
+                              }
+                            } else {
+                              console.warn('Navbar - onEditProfile no está definido');
+                            }
                             closeAllMenus();
                           }}
                           className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
@@ -223,18 +351,7 @@ const Navbar = ({
                           <User className="h-5 w-5 text-blue-400" />
                           <span className="text-slate-300 font-medium">Editar Perfil</span>
                         </button>
-                        
-                        <button
-                          onClick={() => {
-                            onProfile?.();
-                            closeAllMenus();
-                          }}
-                          className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
-                        >
-                          <User className="h-5 w-5 text-blue-400" />
-                          <span className="text-slate-300 font-medium">Mi Perfil</span>
-                        </button>
-                        
+
                         <button
                           onClick={() => {
                             onSettings?.();
@@ -245,9 +362,9 @@ const Navbar = ({
                           <Settings className="h-5 w-5 text-slate-400" />
                           <span className="text-slate-300 font-medium">Configuración</span>
                         </button>
-                        
+
                         <div className="h-px bg-slate-700/30 my-2 mx-3"></div>
-                        
+
                         <button
                           onClick={() => {
                             onSwitchToAdmin?.();
@@ -258,9 +375,9 @@ const Navbar = ({
                           <Crown className="h-5 w-5 text-yellow-400" />
                           <span className="text-slate-300 font-medium">Panel Administrativo</span>
                         </button>
-                        
+
                         <div className="h-px bg-slate-700/30 my-2 mx-3"></div>
-                        
+
                         <button
                           onClick={() => {
                             handleLogout();
@@ -276,12 +393,13 @@ const Navbar = ({
                   </>
                 )}
               </div>
-            ) : (
+            ) : shouldShowAuthButtons ? (
               /* Usuario no autenticado - Botones de auth */
               <div className="flex items-center space-x-2">
                 <div className="relative hidden sm:block">
-                  <button 
-                    onClick={() => {
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setShowAuthMenu(!showAuthMenu);
                       setShowUserMenu(false);
                     }}
@@ -295,7 +413,7 @@ const Navbar = ({
                   {/* Auth Dropdown */}
                   {showAuthMenu && (
                     <>
-                      <div 
+                      <div
                         className="fixed inset-0 z-40"
                         onClick={closeAllMenus}
                       />
@@ -308,7 +426,7 @@ const Navbar = ({
                             <LogIn className="h-5 w-5 text-emerald-400" />
                             <span className="text-slate-300 font-medium">Iniciar Sesión</span>
                           </button>
-                          
+
                           <button
                             onClick={handleShowRegister}
                             className="w-full flex items-center space-x-3 px-3 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
@@ -316,9 +434,9 @@ const Navbar = ({
                             <UserPlus className="h-5 w-5 text-blue-400" />
                             <span className="text-slate-300 font-medium">Registrarse</span>
                           </button>
-                          
+
                           <div className="h-px bg-slate-700/30 my-2 mx-3"></div>
-                          
+
                           <button
                             onClick={() => {
                               onSwitchToAdmin?.();
@@ -344,7 +462,7 @@ const Navbar = ({
                   >
                     <LogIn className="h-5 w-5" />
                   </button>
-                  
+
                   <button
                     onClick={handleShowRegister}
                     className="p-2 rounded-lg bg-slate-800/50 text-blue-400 hover:bg-slate-800 border border-slate-700/50 hover:border-blue-500/30 transition-all duration-200"
@@ -354,13 +472,16 @@ const Navbar = ({
                   </button>
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {/* Mobile menu button - Solo mostrar si no está en vistas de auth */}
-            {!['login', 'register'].includes(currentView) && (
+            {/* Mobile menu button */}
+            {shouldShowMobileMenu && (
               <div className="lg:hidden">
-                <button 
-                  onClick={toggleMobileMenu}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMobileMenuOpen(!isMobileMenuOpen);
+                  }}
                   className="p-3 rounded-xl bg-slate-800/50 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 transition-all duration-200"
                 >
                   {isMobileMenuOpen ? (
@@ -374,20 +495,20 @@ const Navbar = ({
           </div>
         </div>
 
-        {/* Mobile Navigation Overlay - Solo mostrar si no está en vistas de auth */}
-        {isMobileMenuOpen && !['login', 'register'].includes(currentView) && (
+        {/* Mobile Navigation Overlay */}
+        {isMobileMenuOpen && shouldShowMobileMenu && (
           <>
-            <div 
+            <div
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-              onClick={toggleMobileMenu}
+              onClick={closeAllMenus}
             />
-            
+
             <div className="fixed inset-x-0 top-16 mx-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700/50 rounded-2xl shadow-2xl z-50 lg:hidden animate-scale-in overflow-y-auto max-h-[calc(100vh-8rem)]">
               {/* Restaurant Info - Mobile */}
               {restaurant && (
                 <div className="p-4 border-b border-slate-700/30">
                   <div className="flex items-center space-x-3">
-                    <img 
+                    <img
                       src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=48&h=48&fit=crop"}
                       alt={restaurant.name}
                       className="w-12 h-12 rounded-xl object-cover"
@@ -407,7 +528,7 @@ const Navbar = ({
                 {navItems.map((item) => {
                   const IconComponent = item.icon;
                   const isActive = currentView === item.id;
-                  
+
                   return (
                     <button
                       key={item.id}
@@ -433,7 +554,7 @@ const Navbar = ({
                           {item.id === 'favorites' && 'Música favorita'}
                         </div>
                       </div>
-                      
+
                       {isActive && (
                         <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                       )}
@@ -441,11 +562,11 @@ const Navbar = ({
                   );
                 })}
               </div>
-              
+
               {/* Mobile Actions */}
               <div className="border-t border-slate-700/50 p-4">
                 <div className="space-y-2">
-                  {isAuthenticated && user ? (
+                  {shouldShowUserMenu ? (
                     /* Usuario autenticado - Mobile */
                     <>
                       <div className="px-4 py-2 text-sm text-slate-400 border-b border-slate-700/30 mb-4">
@@ -456,10 +577,20 @@ const Navbar = ({
                           <span>{user.name || user.email}</span>
                         </div>
                       </div>
-                      
+
                       <button
                         onClick={() => {
-                          onEditProfile?.();
+                          console.log('Navbar - Ejecutando EditProfile (mobile)...');
+                          if (onEditProfile) {
+                            try {
+                              onEditProfile();
+                              console.log('Navbar - EditProfile (mobile) ejecutado exitosamente');
+                            } catch (error) {
+                              console.error('Navbar - Error en EditProfile (mobile):', error);
+                            }
+                          } else {
+                            console.warn('Navbar - onEditProfile no está definido (mobile)');
+                          }
                           setIsMobileMenuOpen(false);
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
@@ -467,18 +598,7 @@ const Navbar = ({
                         <User className="h-5 w-5 text-blue-400" />
                         <span className="text-slate-300 font-medium">Editar Perfil</span>
                       </button>
-                      
-                      <button
-                        onClick={() => {
-                          onProfile?.();
-                          setIsMobileMenuOpen(false);
-                        }}
-                        className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-slate-800/50 rounded-xl transition-colors"
-                      >
-                        <User className="h-5 w-5 text-blue-400" />
-                        <span className="text-slate-300 font-medium">Mi Perfil</span>
-                      </button>
-                      
+
                       <button
                         onClick={() => {
                           onSettings?.();
@@ -489,7 +609,7 @@ const Navbar = ({
                         <Settings className="h-5 w-5 text-slate-400" />
                         <span className="text-slate-300 font-medium">Configuración</span>
                       </button>
-                      
+
                       <button
                         onClick={() => {
                           onSwitchToAdmin?.();
@@ -500,7 +620,7 @@ const Navbar = ({
                         <Crown className="h-5 w-5 text-yellow-400" />
                         <span className="text-slate-300 font-medium">Panel Administrativo</span>
                       </button>
-                      
+
                       <button
                         onClick={() => {
                           handleLogout();
@@ -512,7 +632,7 @@ const Navbar = ({
                         <span className="font-medium">Cerrar Sesión</span>
                       </button>
                     </>
-                  ) : (
+                  ) : shouldShowAuthButtons ? (
                     /* Usuario no autenticado - Mobile */
                     <>
                       <button
@@ -525,7 +645,7 @@ const Navbar = ({
                         <LogIn className="h-5 w-5 text-emerald-400" />
                         <span className="text-slate-300 font-medium">Iniciar Sesión</span>
                       </button>
-                      
+
                       <button
                         onClick={() => {
                           handleShowRegister();
@@ -536,7 +656,7 @@ const Navbar = ({
                         <UserPlus className="h-5 w-5 text-blue-400" />
                         <span className="text-slate-300 font-medium">Registrarse</span>
                       </button>
-                      
+
                       <button
                         onClick={() => {
                           onSwitchToAdmin?.();
@@ -548,21 +668,21 @@ const Navbar = ({
                         <span className="text-slate-300 font-medium">Panel Administrativo</span>
                       </button>
                     </>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
           </>
         )}
 
-        {/* Bottom Navigation for Mobile - Alternative - Solo mostrar si no está en vistas de auth */}
-        {!['login', 'register'].includes(currentView) && (
-          <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 md:hidden pb-4">
+        {/* Bottom Navigation for Mobile */}
+        {shouldShowNavigation && (
+          <div className="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/50 lg:hidden z-40 pb-4">
             <div className="grid grid-cols-4 gap-1 p-2 mx-4">
               {navItems.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = currentView === item.id;
-                
+
                 return (
                   <button
                     key={item.id}

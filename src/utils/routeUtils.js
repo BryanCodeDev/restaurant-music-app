@@ -162,7 +162,10 @@ export const routeUtils = {
 
   // Verificar si mostrar botones de autenticación
   shouldShowAuthButtons: (userType) => {
-    return NAVIGATION_CONFIG[userType]?.showAuthButtons || false;
+    console.log('routeUtils - shouldShowAuthButtons called with userType:', userType);
+    const result = NAVIGATION_CONFIG[userType]?.showAuthButtons || false;
+    console.log('routeUtils - shouldShowAuthButtons result:', result);
+    return result;
   },
 
   // Verificar si mostrar botón de admin

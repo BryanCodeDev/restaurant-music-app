@@ -120,7 +120,7 @@ const SuperAdminDashboard = ({ profile, onLogout, onEditProfile }) => {
     { id: 'users', label: 'User Management', icon: Users }
   ];
 
-  if (loading) return <div className="p-8 text-center">Loading dashboard...</div>;
+  // Loading eliminado - mostrar directamente el contenido
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white p-6">

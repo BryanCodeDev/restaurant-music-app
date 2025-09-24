@@ -12,6 +12,7 @@ const FormField = ({
   disabled = false,
   icon: Icon,
   className = '',
+  children,
   ...props
 }) => {
   const baseInputClasses = `
@@ -43,6 +44,7 @@ const FormField = ({
           className={Icon ? `${baseInputClasses} pl-12` : baseInputClasses}
           {...props}
         />
+        {children}
       </div>
 
       {error && (

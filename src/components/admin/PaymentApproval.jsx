@@ -387,16 +387,7 @@ const PaymentApproval = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-400">Cargando suscripciones...</p>
-        </div>
-      </div>
-    );
-  }
+  // Loading eliminado - mostrar directamente el contenido
 
   return (
     <div className="space-y-6">

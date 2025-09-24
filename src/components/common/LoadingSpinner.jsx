@@ -86,12 +86,7 @@ const LoadingSpinner = ({
   );
 };
 
-// Componentes específicos para casos de uso comunes
-export const PageLoading = ({ message = 'Cargando página...' }) => (
-  <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white flex items-center justify-center">
-    <LoadingSpinner size="xl" variant="music" message={message} />
-  </div>
-);
+// PageLoading eliminado - no mostrar loading screens
 
 export const CardLoading = ({ message = 'Cargando...' }) => (
   <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-xl p-8">

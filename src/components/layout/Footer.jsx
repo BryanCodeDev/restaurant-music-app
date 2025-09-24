@@ -1,19 +1,28 @@
 import React from 'react';
-import { 
-  Music, 
-  Heart, 
-  MapPin, 
-  Globe, 
-  Mail, 
-  Phone, 
+import {
+  Music,
+  Heart,
+  MapPin,
+  Globe,
+  Mail,
+  Phone,
   Clock,
   Wifi,
   Shield,
-  Info
+  Info,
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  ArrowUp
 } from 'lucide-react';
 
 const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
   const currentYear = new Date().getFullYear();
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const getConnectionColor = (status) => {
     switch (status) {
@@ -34,12 +43,13 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
   };
 
   return (
+    <>
     <footer className="bg-slate-900/90 backdrop-blur-xl border-t border-slate-700/50 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          
+
           {/* Brand Section */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center space-x-3">
@@ -51,15 +61,16 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
               </div>
               <div>
                 <span className="text-xl font-black bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                  MusicMenu
+                  BryJu Sound
                 </span>
-                <p className="text-xs text-slate-500">by MasterCode Company</p>
+                <p className="text-xs text-slate-500">La plataforma líder de música interactiva</p>
               </div>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed max-w-md">
-              La experiencia musical interactiva para restaurantes. Conecta con la música mientras disfrutas tu comida, solicita tus canciones favoritas y crea el ambiente perfecto.
+              La plataforma líder de música interactiva para restaurantes en Colombia.
+              Transformamos la experiencia de tus clientes.
             </p>
-            
+
             {/* Connection Status */}
             <div className="flex items-center space-x-2 text-sm">
               <Wifi className={`h-4 w-4 ${getConnectionColor(connectionStatus)}`} />
@@ -70,6 +81,22 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
                 <span className="text-slate-500">• En vivo</span>
               )}
             </div>
+
+            {/* Social Media Links */}
+            <div className="flex space-x-4">
+              <a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-slate-400 hover:text-purple-400 transition-colors">
+                <Youtube className="h-5 w-5" />
+              </a>
+            </div>
           </div>
 
           {/* Restaurant Info */}
@@ -78,12 +105,12 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
               <MapPin className="h-5 w-5 text-blue-400" />
               <span>Información del Local</span>
             </h3>
-            
+
             <div className="space-y-3">
               {restaurant && (
                 <>
                   <div className="flex items-start space-x-3">
-                    <img 
+                    <img
                       src={restaurant.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=40&h=40&fit=crop"}
                       alt={restaurant.name}
                       className="w-10 h-10 rounded-lg object-cover border border-slate-700"
@@ -95,14 +122,14 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
                       </p>
                     </div>
                   </div>
-                  
+
                   {restaurant.address && (
                     <div className="flex items-center space-x-2 text-sm text-slate-400">
                       <MapPin className="h-4 w-4 text-slate-500" />
                       <span className="text-xs">{restaurant.address}</span>
                     </div>
                   )}
-                  
+
                   {restaurant.phone && (
                     <div className="flex items-center space-x-2 text-sm text-slate-400">
                       <Phone className="h-4 w-4 text-slate-500" />
@@ -111,7 +138,7 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
                   )}
                 </>
               )}
-              
+
               {userTable && (
                 <div className="mt-3 p-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
                   <div className="flex items-center space-x-2 text-sm">
@@ -130,39 +157,61 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
               <Info className="h-5 w-5 text-blue-400" />
               <span>Enlaces Útiles</span>
             </h3>
-            
+
             <div className="space-y-2">
-              <a 
-                href="#about" 
+              <a
+                href="/caracteristicas"
                 className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
               >
-                ¿Cómo funciona?
+                Características
               </a>
-              <a 
-                href="#help" 
+              <a
+                href="/precios"
                 className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
               >
-                Ayuda y soporte
+                Precios
               </a>
-              <a 
-                href="#privacy" 
+              <a
+                href="/sobre-nosotros"
                 className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
               >
-                Privacidad
+                Sobre Nosotros
               </a>
-              <a 
-                href="#terms" 
+              <a
+                href="/contacto"
                 className="block text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
               >
-                Términos de uso
+                Contacto
               </a>
-              <a 
-                href="mailto:support@musicmenu.com" 
+              <a
+                href="mailto:hola@bryjusound.com"
                 className="flex items-center space-x-2 text-slate-400 hover:text-white text-sm transition-colors hover:translate-x-1 transform duration-200"
               >
                 <Mail className="h-3 w-3" />
-                <span>Contacto</span>
+                <span>Soporte</span>
               </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Newsletter Signup */}
+        <div className="border-t border-slate-700/50 mt-8 pt-8 mb-8">
+          <div className="max-w-md mx-auto text-center">
+            <h3 className="text-lg font-semibold text-white mb-2">
+              ¿Quieres estar al día?
+            </h3>
+            <p className="text-slate-400 mb-4">
+              Suscríbete a nuestro newsletter para recibir tips sobre música en restaurantes
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="email"
+                placeholder="tu@email.com"
+                className="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <button className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-colors">
+                Suscribir
+              </button>
             </div>
           </div>
         </div>
@@ -176,13 +225,13 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
                   <Clock className="h-4 w-4 text-blue-400" />
                   <span className="text-sm text-slate-300">Sesión iniciada:</span>
                   <span className="text-sm text-blue-400">
-                    {new Date().toLocaleTimeString('es-ES', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {new Date().toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </span>
                 </div>
-                
+
                 {userTable && (
                   <>
                     <div className="w-1 h-1 bg-slate-600 rounded-full"></div>
@@ -190,13 +239,13 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
                   </>
                 )}
               </div>
-              
+
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
                   <Shield className="h-4 w-4 text-green-400" />
                   <span className="text-xs text-slate-400">Conexión segura</span>
                 </div>
-                
+
                 <div className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span className="text-xs text-slate-400">Tiempo real</span>
@@ -209,20 +258,20 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
         {/* Bottom Bar */}
         <div className="border-t border-slate-700/50 pt-6 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
           <div className="flex items-center space-x-6 text-sm text-slate-400">
-            <span>© {currentYear} MusicMenu.</span>
+            <span>© {currentYear} BryJu Sound.</span>
             <span>Todos los derechos reservados.</span>
             <span className="hidden sm:inline">v2.1.0</span>
           </div>
-          
+
           <div className="flex items-center space-x-2 text-sm text-slate-400">
             <span>Desarrollado con</span>
             <Heart className="h-4 w-4 text-red-400 fill-current animate-pulse" />
             <span>por</span>
-            <a 
-              href="#" 
+            <a
+              href="#"
               className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
             >
-              MasterCode Company
+              BryJu Sound
             </a>
           </div>
         </div>
@@ -241,10 +290,20 @@ const Footer = ({ restaurant, userTable, connectionStatus = 'connected' }) => {
           </div>
         )}
       </div>
-      
+
       {/* Mobile bottom padding for bottom navigation */}
       <div className="h-20 md:hidden"></div>
+
+      {/* Back to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-8 right-8 w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 flex items-center justify-center z-50"
+        aria-label="Volver arriba"
+      >
+        <ArrowUp className="h-5 w-5" />
+      </button>
     </footer>
+    </>
   );
 };
 

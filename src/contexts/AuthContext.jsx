@@ -32,7 +32,9 @@ const AUTH_ACTIONS = {
   SET_APP_MODE: 'SET_APP_MODE',
   SET_CURRENT_STEP: 'SET_CURRENT_STEP',
   SET_SELECTED_RESTAURANT: 'SET_SELECTED_RESTAURANT',
-  CLEAR_ERROR: 'CLEAR_ERROR'
+  CLEAR_ERROR: 'CLEAR_ERROR',
+  SET_SUCCESS_MESSAGE: 'SET_SUCCESS_MESSAGE',
+  CLEAR_SUCCESS_MESSAGE: 'CLEAR_SUCCESS_MESSAGE'
 };
 
 // Estado inicial
@@ -44,7 +46,8 @@ const initialState = {
   selectedRestaurant: null,
   isAuthenticated: false,
   isLoading: true,
-  error: null
+  error: null,
+  successMessage: null
 };
 
 // Reducer de autenticación
@@ -58,11 +61,17 @@ const authReducer = (state, action) => {
       };
 
     case AUTH_ACTIONS.SET_USER:
+      const user = action.payload.user;
+      const userType = action.payload.userType || USER_TYPES.GUEST;
+
+      console.log('Setting user in reducer:', user);
+      console.log('User type:', userType);
+
       return {
         ...state,
-        user: action.payload.user,
-        userType: action.payload.userType || USER_TYPES.GUEST,
-        isAuthenticated: !!action.payload.user,
+        user: user,
+        userType: userType,
+        isAuthenticated: !!user,
         isLoading: false,
         error: null
       };
@@ -104,6 +113,18 @@ const authReducer = (state, action) => {
         error: null
       };
 
+    case AUTH_ACTIONS.SET_SUCCESS_MESSAGE:
+      return {
+        ...state,
+        successMessage: action.payload
+      };
+
+    case AUTH_ACTIONS.CLEAR_SUCCESS_MESSAGE:
+      return {
+        ...state,
+        successMessage: null
+      };
+
     default:
       return state;
   }
@@ -130,10 +151,24 @@ export const AuthProvider = ({ children }) => {
         appMode: state.appMode,
         currentStep: state.currentStep,
         selectedRestaurant: state.selectedRestaurant,
-        isAuthenticated: state.isAuthenticated
+        isAuthenticated: state.isAuthenticated,
+        successMessage: state.successMessage
       }));
     }
-  }, [state.user, state.userType, state.appMode, state.currentStep, state.selectedRestaurant, state.isAuthenticated, state.isLoading]);
+  }, [state.user, state.userType, state.appMode, state.currentStep, state.selectedRestaurant, state.isAuthenticated, state.isLoading, state.successMessage]);
+
+  // Debug logging para el estado de autenticación
+  useEffect(() => {
+    console.log('AuthContext - Estado actualizado:', {
+      user: state.user ? { id: state.user.id, name: state.user.name, email: state.user.email } : null,
+      userType: state.userType,
+      isAuthenticated: state.isAuthenticated,
+      appMode: state.appMode,
+      currentStep: state.currentStep,
+      selectedRestaurant: state.selectedRestaurant ? { id: state.selectedRestaurant.id, name: state.selectedRestaurant.name } : null,
+      successMessage: state.successMessage
+    });
+  }, [state.user, state.userType, state.isAuthenticated, state.appMode, state.currentStep, state.selectedRestaurant, state.successMessage]);
 
   const initializeAuth = async () => {
     try {
@@ -145,21 +180,55 @@ export const AuthProvider = ({ children }) => {
         try {
           const parsedState = JSON.parse(savedState);
           if (parsedState.isAuthenticated && parsedState.user) {
-            // Validar token con el backend
-            const profileResponse = await apiService.getProfile();
-            if (profileResponse.success && profileResponse.data) {
-              dispatch({
-                type: AUTH_ACTIONS.SET_USER,
-                payload: {
-                  user: profileResponse.data,
-                  userType: parsedState.userType
+            // Verificar si el token existe y no ha expirado
+            const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+            if (token) {
+              // Intentar validar el token con un timeout para evitar bloqueos
+              try {
+                const profilePromise = apiService.getProfile();
+                const timeoutPromise = new Promise((_, reject) =>
+                  setTimeout(() => reject(new Error('Profile validation timeout')), 5000)
+                );
+
+                const profileResponse = await Promise.race([profilePromise, timeoutPromise]);
+
+                if (profileResponse.success && profileResponse.data) {
+                  dispatch({
+                    type: AUTH_ACTIONS.SET_USER,
+                    payload: {
+                      user: profileResponse.data,
+                      userType: parsedState.userType
+                    }
+                  });
+                } else {
+                  // Si falla la validación, usar los datos guardados
+                  dispatch({
+                    type: AUTH_ACTIONS.SET_USER,
+                    payload: {
+                      user: parsedState.user,
+                      userType: parsedState.userType
+                    }
+                  });
                 }
-              });
+              } catch (profileError) {
+                // Si hay error (rate limiting, timeout, etc.), usar los datos guardados
+                console.warn('Profile validation failed, using saved data:', profileError);
+                dispatch({
+                  type: AUTH_ACTIONS.SET_USER,
+                  payload: {
+                    user: parsedState.user,
+                    userType: parsedState.userType
+                  }
+                });
+              }
 
               // Restaurar estado de la aplicación
               dispatch({ type: AUTH_ACTIONS.SET_APP_MODE, payload: parsedState.appMode });
               dispatch({ type: AUTH_ACTIONS.SET_CURRENT_STEP, payload: parsedState.currentStep });
               dispatch({ type: AUTH_ACTIONS.SET_SELECTED_RESTAURANT, payload: parsedState.selectedRestaurant });
+              if (parsedState.successMessage) {
+                dispatch({ type: AUTH_ACTIONS.SET_SUCCESS_MESSAGE, payload: parsedState.successMessage });
+              }
               return;
             }
           }
@@ -186,61 +255,121 @@ export const AuthProvider = ({ children }) => {
       let result;
       let userType = credentials.userType || USER_TYPES.REGISTERED;
 
-      switch (userType) {
-        case USER_TYPES.RESTAURANT:
-          result = await apiService.loginRestaurant(credentials.email, credentials.password);
-          break;
-        case USER_TYPES.SUPERADMIN:
-          result = await apiService.loginUser(credentials.email, credentials.password);
-          break;
-        default:
-          result = await apiService.loginUser(credentials.email, credentials.password);
-          break;
-      }
+      console.log('AuthContext - Iniciando login con:', { email: credentials.email, userType });
+
+      // Agregar timeout para evitar que se quede colgado
+      const loginPromise = (() => {
+        switch (userType) {
+          case USER_TYPES.RESTAURANT:
+            return apiService.loginRestaurant(credentials.email, credentials.password);
+          case USER_TYPES.SUPERADMIN:
+            return apiService.loginUser(credentials.email, credentials.password);
+          default:
+            return apiService.loginUser(credentials.email, credentials.password);
+        }
+      })();
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login timeout')), 10000)
+      );
+
+      result = await Promise.race([loginPromise, timeoutPromise]);
 
       if (result && (result.success || result.access_token || result.user || result.data)) {
         let userData = result.data?.user || result.user || result.data || result;
 
-        // Obtener perfil adicional
-        try {
-          const profileResponse = await apiService.getProfile();
-          if (profileResponse.success && profileResponse.data) {
-            if (userType === USER_TYPES.RESTAURANT) {
-              userData = { ...userData, restaurant: profileResponse.data.restaurant || userData.restaurant };
-            } else {
-              userData = { ...userData, user: profileResponse.data.user || userData };
-            }
-          }
-        } catch (profileError) {
-          console.warn('Could not fetch profile:', profileError);
+        console.log('AuthContext - Login result:', result);
+        console.log('AuthContext - Extracted userData:', userData);
+
+        // Validar que tenemos datos de usuario válidos
+        if (!userData || (typeof userData === 'object' && Object.keys(userData).length === 0)) {
+          throw new Error('No se recibieron datos de usuario válidos del servidor');
         }
+
+        // Determinar el tipo de usuario basado en los datos recibidos
+        let finalUserType = userType;
+
+        // Si es un usuario registrado, verificar si es superadmin
+        if (userType === USER_TYPES.REGISTERED) {
+          if (userData.role === 'superadmin' || userData.is_superadmin) {
+            finalUserType = USER_TYPES.SUPERADMIN;
+          }
+        }
+
+        // Si es un restaurante, verificar si es superadmin
+        if (userType === USER_TYPES.RESTAURANT) {
+          if (userData.role === 'superadmin' || userData.is_superadmin) {
+            finalUserType = USER_TYPES.SUPERADMIN;
+          }
+        }
+
+        // Obtener perfil adicional (solo si es necesario)
+        if (finalUserType === USER_TYPES.RESTAURANT) {
+          try {
+            const profilePromise = apiService.getProfile();
+            const profileTimeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
+            );
+
+            const profileResponse = await Promise.race([profilePromise, profileTimeoutPromise]);
+            console.log('AuthContext - Profile response:', profileResponse);
+            if (profileResponse.success && profileResponse.data) {
+              userData = { ...userData, restaurant: profileResponse.data.restaurant || userData.restaurant };
+            }
+          } catch (profileError) {
+            console.warn('AuthContext - Could not fetch restaurant profile:', profileError);
+            // No lanzar error aquí, continuar con los datos que tenemos
+          }
+        }
+
+        console.log('AuthContext - Final userData before dispatch:', userData);
+        console.log('AuthContext - Final userType:', finalUserType);
 
         dispatch({
           type: AUTH_ACTIONS.SET_USER,
-          payload: { user: userData, userType }
+          payload: { user: userData, userType: finalUserType }
         });
 
-        // Determinar siguiente paso
+        // Determinar siguiente paso basado en el tipo de usuario
         let nextStep = 'restaurant-selection';
         let nextAppMode = APP_MODES.CUSTOMER;
 
-        if (userType === USER_TYPES.SUPERADMIN || userData.role === USER_TYPES.SUPERADMIN) {
+        if (finalUserType === USER_TYPES.SUPERADMIN) {
           nextStep = 'superadmin-panel';
           nextAppMode = APP_MODES.ADMIN;
-        } else if (userType === USER_TYPES.RESTAURANT) {
+        } else if (finalUserType === USER_TYPES.RESTAURANT) {
           nextStep = 'restaurant-panel';
           nextAppMode = APP_MODES.ADMIN;
+        } else if (finalUserType === USER_TYPES.REGISTERED) {
+          // Usuario registrado normal - ir a selección de restaurante
+          nextStep = 'restaurant-selection';
+          nextAppMode = APP_MODES.CUSTOMER;
         }
 
         dispatch({ type: AUTH_ACTIONS.SET_APP_MODE, payload: nextAppMode });
         dispatch({ type: AUTH_ACTIONS.SET_CURRENT_STEP, payload: nextStep });
 
-        return { success: true, userType, nextStep };
+        // Mostrar mensaje de éxito
+        const successMessage = '¡Inicio de sesión exitoso! Bienvenido de vuelta.';
+        dispatch({ type: AUTH_ACTIONS.SET_SUCCESS_MESSAGE, payload: successMessage });
+
+        // Debug logging para verificar el estado después del login
+        console.log('AuthContext - Login successful:', {
+          user: userData,
+          userType: finalUserType,
+          isAuthenticated: true,
+          nextStep,
+          nextAppMode,
+          successMessage
+        });
+
+        return { success: true, userType: finalUserType, nextStep, successMessage };
       } else {
         throw new Error(result?.message || 'Error al iniciar sesión');
       }
     } catch (error) {
       const errorMessage = error.message || 'Error de conexión. Verifica tus credenciales.';
+      console.error('AuthContext - Login error:', error);
       dispatch({ type: AUTH_ACTIONS.SET_ERROR, payload: errorMessage });
       throw new Error(errorMessage);
     }
@@ -295,9 +424,32 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
-    apiService.clearSession();
-    localStorage.removeItem('auth_state');
-    dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    console.log('AuthContext - Ejecutando logout...');
+    try {
+      // Limpiar sesión del API
+      apiService.clearSession();
+
+      // Limpiar localStorage
+      localStorage.removeItem('auth_state');
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_type');
+      localStorage.removeItem('currentView');
+
+      // Limpiar cookies si existen
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Resetear estado
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+
+      console.log('AuthContext - Logout completado exitosamente');
+    } catch (error) {
+      console.error('AuthContext - Error durante logout:', error);
+      // Forzar logout incluso si hay error
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+    }
   };
 
   const switchToAdminMode = () => {
@@ -324,6 +476,14 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   };
 
+  const clearSuccessMessage = () => {
+    dispatch({ type: AUTH_ACTIONS.CLEAR_SUCCESS_MESSAGE });
+  };
+
+  const showSuccessMessage = (message) => {
+    dispatch({ type: AUTH_ACTIONS.SET_SUCCESS_MESSAGE, payload: message });
+  };
+
   const value = {
     // Estado
     ...state,
@@ -337,6 +497,8 @@ export const AuthProvider = ({ children }) => {
     selectRestaurant,
     setCurrentStep,
     clearError,
+    clearSuccessMessage,
+    showSuccessMessage,
 
     // Constantes
     USER_TYPES,

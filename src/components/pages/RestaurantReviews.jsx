@@ -88,16 +88,7 @@ const RestaurantReviews = ({ restaurantSlug }) => {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span className="ml-2 text-slate-400">Cargando reseñas...</span>
-        </div>
-      </div>
-    );
-  }
+  // Loading eliminado - mostrar directamente el contenido
 
   const averageRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : 0;
 

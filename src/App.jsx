@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
 // Layout Components
-import EnhancedNavbar from './components/layout/EnhancedNavbar';
-import EnhancedFooter from './components/layout/EnhancedFooter';
+import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
 
 // Page Components
 import HomePage from './components/pages/HomePage';
@@ -37,6 +37,9 @@ import SpotifyLogin from './components/music/SpotifyLogin';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import routeUtils from './utils/routeUtils';
 
+// Common Components
+import Notification from './components/common/Notification';
+
 // Static Pages
 import StaticPageRouter from './components/common/StaticPageRouter';
 
@@ -58,7 +61,9 @@ function App() {
     login: handleUserLogin,
     register: handleUserRegister,
     logout: handleLogout,
-    setCurrentStep
+    setCurrentStep,
+    successMessage,
+    clearSuccessMessage
   } = useAuth();
 
   // Music App State
@@ -101,16 +106,27 @@ function App() {
 
   // User Authentication Handlers - Usando AuthContext
   const handleShowLogin = () => {
+    console.log('App.jsx - handleShowLogin called, setting currentView to login');
     setCurrentView('login');
   };
 
   const handleShowRegister = () => {
+    console.log('App.jsx - handleShowRegister called, setting currentView to register');
     setCurrentView('register');
   };
 
   const handleUserLogout = () => {
-    handleLogout();
-    setCurrentView('home');
+    console.log('App.jsx - Ejecutando handleUserLogout...');
+    try {
+      handleLogout();
+      setCurrentView('home');
+      console.log('App.jsx - handleUserLogout completado exitosamente');
+    } catch (error) {
+      console.error('App.jsx - Error en handleUserLogout:', error);
+      // Forzar logout incluso si hay error
+      handleLogout();
+      setCurrentView('home');
+    }
   };
 
   const handleAdminLogout = () => {
@@ -141,7 +157,15 @@ function App() {
   };
 
   const handleEditProfile = () => {
-    setCurrentView('edit-profile');
+    console.log('App.jsx - Ejecutando handleEditProfile...');
+    try {
+      setCurrentView('edit-profile');
+      console.log('App.jsx - handleEditProfile completado exitosamente');
+    } catch (error) {
+      console.error('App.jsx - Error en handleEditProfile:', error);
+      // Forzar cambio de vista incluso si hay error
+      setCurrentView('edit-profile');
+    }
   };
 
   // Static Page Handlers
@@ -333,9 +357,27 @@ function App() {
 
         case 'login':
           return (
-            <div className="max-w-2xl mx-auto px-4 py-8">
+            <div className="max-w-4xl mx-auto px-4 py-8">
               <Login
-                onLogin={handleUserLogin}
+                onLogin={async (credentials) => {
+                  try {
+                    const result = await handleUserLogin(credentials);
+                    if (result.success) {
+                      console.log('Login successful, redirecting...');
+                      // Forzar la redirección basada en el tipo de usuario
+                      if (result.userType === 'restaurant' || result.userType === 'superadmin') {
+                        // Usuario administrativo - ir al panel admin
+                        setCurrentView('home');
+                      } else {
+                        // Usuario normal - ir a la aplicación musical
+                        setCurrentView('home');
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Login error in App:', error);
+                    setAuthError(error.message);
+                  }
+                }}
                 onSwitchToRegister={() => setCurrentView('register')}
                 onSwitchToCustomer={() => setCurrentView('home')}
                 isLoading={false}
@@ -346,9 +388,21 @@ function App() {
 
         case 'register':
           return (
-            <div className="max-w-2xl mx-auto px-4 py-8">
+            <div className="max-w-4xl mx-auto px-4 py-8">
               <Register
-                onRegister={handleUserRegister}
+                onRegister={async (userData) => {
+                  try {
+                    const result = await handleUserRegister(userData);
+                    if (result.success) {
+                      console.log('Register successful, redirecting...');
+                      // Después del registro exitoso, ir a la aplicación
+                      setCurrentView('home');
+                    }
+                  } catch (error) {
+                    console.error('Register error in App:', error);
+                    setAuthError(error.message);
+                  }
+                }}
                 onSwitchToLogin={() => setCurrentView('login')}
                 onSwitchToCustomer={() => setCurrentView('home')}
                 isLoading={false}
@@ -451,7 +505,7 @@ function App() {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 text-white">
-        <EnhancedNavbar
+        <Navbar
           currentView={currentView}
           onViewChange={setCurrentView}
           restaurant={selectedRestaurant}
@@ -464,6 +518,10 @@ function App() {
           onEditProfile={handleEditProfile}
           onSettings={handleSettings}
           onSelectRestaurant={handleSelectRestaurant}
+          onBackToRestaurantSelector={() => setCurrentStep('restaurant-selection')}
+          user={user}
+          userType={userType}
+          isAuthenticated={isAuthenticated}
         />
 
         <main className="min-h-screen">
@@ -508,9 +566,10 @@ function App() {
 
         {/* Footer - Solo mostrar si NO está en vistas de auth y NO es página estática */}
         {!['login', 'register'].includes(currentView) && currentView !== 'static-page' && (
-          <EnhancedFooter
+          <Footer
             restaurant={selectedRestaurant}
             userTable={safeRestaurantMusic.userSession?.tableNumber}
+            connectionStatus="connected"
           />
         )}
       </div>
@@ -562,7 +621,7 @@ function App() {
       return (
         <div className="min-h-screen">
           <StaticPageRouter currentPage={currentStaticPage} />
-          <EnhancedFooter />
+          <Footer connectionStatus="connected" />
         </div>
       );
     }
@@ -577,19 +636,25 @@ function App() {
       return renderStaticPage();
     }
 
+    // Si el usuario está autenticado y está en vistas de auth, redirigir automáticamente
+    if (isAuthenticated && ['login', 'register'].includes(currentView)) {
+      console.log('Usuario autenticado en vista de auth, redirigiendo...');
+      if (userType === 'restaurant' || userType === 'superadmin') {
+        // Usuario administrativo - ir al panel admin
+        return renderAdminDashboard();
+      } else {
+        // Usuario normal - ir a la aplicación musical
+        return renderMusicApp();
+      }
+    }
+
     if (appMode === 'admin') {
       switch(currentStep) {
         case 'admin-auth':
           return (
             <AdminAuth
-              onLogin={async (credentials) => {
-                const { login } = useAuth();
-                await login(credentials);
-              }}
-              onRegister={async (data) => {
-                const { register } = useAuth();
-                await register(data);
-              }}
+              onLogin={handleUserLogin}
+              onRegister={handleUserRegister}
               onSwitchToCustomer={switchToCustomerMode}
             />
           );
@@ -620,14 +685,8 @@ function App() {
         default:
           return (
             <AdminAuth
-              onLogin={async (credentials) => {
-                const { login } = useAuth();
-                await login(credentials);
-              }}
-              onRegister={async (data) => {
-                const { register } = useAuth();
-                await register(data);
-              }}
+              onLogin={handleUserLogin}
+              onRegister={handleUserRegister}
               onSwitchToCustomer={switchToCustomerMode}
             />
           );
@@ -648,6 +707,8 @@ function App() {
             <RestaurantSelector
               onRestaurantSelect={handleRestaurantSelect}
               onSwitchToAdmin={switchToAdminMode}
+              onShowLogin={handleShowLogin}
+              onShowRegister={handleShowRegister}
             />
           );
       }
@@ -674,6 +735,15 @@ function App() {
     <AuthProvider>
       {renderApp()}
       <CookieBanner />
+      {successMessage && (
+        <Notification
+          message={successMessage}
+          type="success"
+          duration={4000}
+          onClose={clearSuccessMessage}
+          position="top-right"
+        />
+      )}
     </AuthProvider>
   );
 }
