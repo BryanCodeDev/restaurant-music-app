@@ -69,7 +69,7 @@ export const useSEO = (seoData) => {
       updateMetaTag('article:section', section, true);
 
       // Article tags
-      tags.forEach((tag, index) => {
+      tags.forEach((tag) => {
         updateMetaTag(`article:tag`, tag, true);
       });
     }

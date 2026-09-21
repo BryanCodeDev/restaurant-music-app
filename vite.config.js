@@ -30,7 +30,7 @@ export default defineConfig({
     target: 'es2015',
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
+    sourcemap: false,
     
     // Optimizaciones de bundle
     rollupOptions: {
@@ -50,26 +50,47 @@ export default defineConfig({
           
           // Separar utils si es lo suficientemente grande
           if (id.includes('src/utils')) {
-            return 'utils';
+            // Solo crear chunk si tiene contenido sustancial
+            return null;
           }
+        },
+        // Optimize chunk naming for caching
+        chunkFileNames: 'assets/js/[name]-[hash].js',
+        entryFileNames: 'assets/js/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name.split('.');
+          const ext = info[info.length - 1];
+          if (/\.(png|jpe?g|gif|svg|webp|avif)$/.test(assetInfo.name)) {
+            return `assets/images/[name]-[hash].${ext}`;
+          }
+          if (/\.(woff2?|ttf|eot)$/.test(assetInfo.name)) {
+            return `assets/fonts/[name]-[hash].${ext}`;
+          }
+          return `assets/[ext]/[name]-[hash].${ext}`;
         },
       },
     },
     
-    // Usar esbuild por defecto (más rápido) o terser si está instalado
-    minify: 'esbuild', // Cambiar a 'terser' si instalas terser
-    
-    // Solo incluir terserOptions si usas terser
-    // terserOptions: {
-    //   compress: {
-    //     drop_console: true, // Remover console.log en producción
-    //     drop_debugger: true,
-    //   },
-    // },
+    // Usar terser para mejor minificación en producción
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+      },
+      format: {
+        comments: false,
+      },
+    },
     
     // Configuraciones adicionales para optimización
     chunkSizeWarningLimit: 1000,
-    reportCompressedSize: false, // Mejora velocidad de build
+    reportCompressedSize: false,
+    cssCodeSplit: true,
+    modulePreload: {
+      polyfill: true,
+    },
   },
   
   // Variables de entorno
